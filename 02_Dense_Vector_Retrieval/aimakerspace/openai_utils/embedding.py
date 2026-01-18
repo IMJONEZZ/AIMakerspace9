@@ -7,15 +7,19 @@ import asyncio
 
 
 class EmbeddingModel:
-    def __init__(self, embeddings_model_name: str = "text-embedding-3-small", batch_size: int = 1024):
+    def __init__(self, embeddings_model_name: str = "text-embedding-nomic-embed-text-v2-moe", batch_size: int = 1024):
         load_dotenv()
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.async_client = AsyncOpenAI()
-        self.client = OpenAI()
+        self.async_client = AsyncOpenAI(
+            base_url="http://192.168.1.79:8080/v1"
+        )
+        self.client = OpenAI(
+                base_url="http://192.168.1.79:8080/v1"
+            )
 
         if self.openai_api_key is None:
-            raise ValueError(
-                "OPENAI_API_KEY environment variable is not set. Please set it to your OpenAI API key."
+            self.client = OpenAI(
+                base_url="http://192.168.1.79:8080/v1"
             )
         self.embeddings_model_name = embeddings_model_name
         self.batch_size = batch_size

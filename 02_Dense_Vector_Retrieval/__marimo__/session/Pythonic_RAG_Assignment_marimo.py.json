@@ -1,0 +1,724 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.19.4"
+  },
+  "cells": [
+    {
+      "id": "Hbol",
+      "code_hash": "8fb74e14919f3985158f12b149b9cfaf",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h1 id=\"your-first-rag-application-personal-wellness-assistant\">Your First RAG Application: Personal Wellness Assistant</h1>\n<span class=\"paragraph\">In this notebook, we'll walk you through each of the components that are involved in a simple RAG application by building a <strong>Personal Wellness Assistant</strong>.</span>\n<span class=\"paragraph\">Imagine having an AI assistant that can answer your health and wellness questions based on a curated knowledge base - that's exactly what we'll build here. We won't be leveraging any fancy tools, just the OpenAI Python SDK, Numpy, and some classic Python.</span>\n<blockquote>\n<span class=\"paragraph\">NOTE: This was done with Python 3.12.3.</span>\n<span class=\"paragraph\">NOTE: There might be <a href=\"https://github.com/wandb/wandb/issues/7683\" rel=\"noopener noreferrer\" target=\"_blank\">compatibility issues</a> if you're on NVIDIA driver &gt;552.44 As an interim solution - you can rollback your drivers to the 552.44.</span>\n</blockquote></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "MJUe",
+      "code_hash": "92ddc4de867ad3c43ab17ca628d69b84",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"table-of-contents\">Table of Contents:</h2>\n<ul>\n<li>Task 1: Imports and Utilities</li>\n<li>Task 2: Documents (Loading our Wellness Knowledge Base)</li>\n<li>Task 3: Embeddings and Vectors</li>\n<li>Task 4: Prompts</li>\n<li>\n<span class=\"paragraph\">Task 5: Retrieval Augmented Generation (Building the Wellness Assistant)</span>\n<ul>\n<li>\ud83d\udea7 Activity #1: Enhance Your Wellness Assistant</li>\n</ul>\n</li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "vblA",
+      "code_hash": "552b5bc56f5a9ebe261b7edad7e11344",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Let's look at a rather complicated looking visual representation of a basic RAG application.</span>\n<span class=\"paragraph\"><img src=\"https://i.imgur.com/vD8b016.png\" /></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "b42e968068fd26393452ed76cdb9c9d9",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-1-imports-and-utilities\">Task 1: Imports and Utilities</h2>\n<span class=\"paragraph\">We're just doing some imports and enabling <code>async</code> to work within the Jupyter environment here, nothing too crazy!</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "6aac1b8791305c023d169c56e15b1063",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-2-documents\">Task 2: Documents</h2>\n<span class=\"paragraph\">We'll be concerning ourselves with this part of the flow in the following section:</span>\n<span class=\"paragraph\"><img src=\"https://i.imgur.com/jTm9gjk.png\" /></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "SFPL",
+      "code_hash": "73b11cfa3ddc61c4f75e61684a9c6246",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"loading-source-documents\">Loading Source Documents</h3>\n<span class=\"paragraph\">So, first things first, we need some documents to work with.</span>\n<span class=\"paragraph\">While we could work directly with the <code>.txt</code> files (or whatever file-types you wanted to extend this to) we can instead do some batch processing of those documents at the beginning in order to store them in a more machine compatible format.</span>\n<span class=\"paragraph\">In this case, we're going to parse our text file into a single document in memory.</span>\n<span class=\"paragraph\">Let's look at the relevant bits of the <code>TextFileLoader</code> class:</span>\n<div class=\"language-python codehilite\"><pre><span></span><code><span class=\"k\">def</span><span class=\"w\"> </span><span class=\"nf\">load_file</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">):</span>\n        <span class=\"k\">with</span> <span class=\"nb\">open</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">path</span><span class=\"p\">,</span> <span class=\"s2\">&quot;r&quot;</span><span class=\"p\">,</span> <span class=\"n\">encoding</span><span class=\"o\">=</span><span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">encoding</span><span class=\"p\">)</span> <span class=\"k\">as</span> <span class=\"n\">f</span><span class=\"p\">:</span>\n            <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">documents</span><span class=\"o\">.</span><span class=\"n\">append</span><span class=\"p\">(</span><span class=\"n\">f</span><span class=\"o\">.</span><span class=\"n\">read</span><span class=\"p\">())</span>\n</code></pre></div>\n<span class=\"paragraph\">We're simply loading the document using the built in <code>open</code> method, and storing that output in our <code>self.documents</code> list.</span>\n<blockquote>\n<span class=\"paragraph\">NOTE: We're using a comprehensive Health &amp; Wellness Guide as our sample data. This content covers exercise, nutrition, sleep, stress management, and healthy habits - perfect for building a personal wellness assistant!</span>\n</blockquote></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Kclp",
+      "code_hash": "4b5e2b68f3a8c38c783952603c56a3d1",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"splitting-text-into-chunks\">Splitting Text Into Chunks</h3>\n<span class=\"paragraph\">As we can see, there is one massive document.</span>\n<span class=\"paragraph\">We'll want to chunk the document into smaller parts so it's easier to pass the most relevant snippets to the LLM.</span>\n<span class=\"paragraph\">There is no fixed way to split/chunk documents - and you'll need to rely on some intuition as well as knowing your data <em>very</em> well in order to build the most robust system.</span>\n<span class=\"paragraph\">For this toy example, we'll just split blindly on length.</span>\n<blockquote>\n<span class=\"paragraph\">There's an opportunity to clear up some terminology here, for this course we will stick to the following:</span>\n<ul>\n<li>\"source documents\" : The <code>.txt</code>, <code>.pdf</code>, <code>.html</code>, ..., files that make up the files and information we start with in its raw format</li>\n<li>\"document(s)\" : single (or more) text object(s)</li>\n<li>\"corpus\" : the combination of all of our documents</li>\n</ul>\n</blockquote></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "emfo",
+      "code_hash": "631b556ef8730bf09d5093c443be8f67",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">As you can imagine (though it's not specifically true in this toy example) the idea of splitting documents is to break them into manageable sized chunks that retain the most relevant local context.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "nWHF",
+      "code_hash": "dcb1e37b824af14c9b8e58c11d465836",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Let's take a look at some of the documents we've managed to split.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ZHCJ",
+      "code_hash": "3d3ddb7c2c3e4813ff4515b3cdfb63cc",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-3-embeddings-and-vectors\">Task 3: Embeddings and Vectors</h2>\n<span class=\"paragraph\">Next, we have to convert our corpus into a \"machine readable\" format as we explored in the Embedding Primer notebook.</span>\n<span class=\"paragraph\">Today, we're going to talk about the actual process of creating, and then storing, these embeddings, and how we can leverage that to intelligently add context to our queries.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ROlb",
+      "code_hash": "a8d697093cfb7d163f5c231ce4f44685",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"openai-api-key\">OpenAI API Key</h3>\n<span class=\"paragraph\">In order to access OpenAI's APIs, we'll need to provide our OpenAI API Key!</span>\n<span class=\"paragraph\">You can work through the folder \"OpenAI API Key Setup\" for more information on this process if you don't already have an API Key!</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TqIu",
+      "code_hash": "728264d591e80bfced83aa0e73b25b5e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"vector-database\">Vector Database</h3>\n<span class=\"paragraph\">Let's set up our vector database to hold all our documents and their embeddings!</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Vxnm",
+      "code_hash": "e2bce2b87e96b9e9954f55de0ec1f766",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">While this is all baked into 1 call - we can look at some of the code that powers this process to get a better understanding:</span>\n<span class=\"paragraph\">Let's look at our <code>VectorDatabase().__init__()</code>:</span>\n<div class=\"language-python codehilite\"><pre><span></span><code><span class=\"k\">def</span><span class=\"w\"> </span><span class=\"fm\">__init__</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"n\">embedding_model</span><span class=\"p\">:</span> <span class=\"n\">EmbeddingModel</span> <span class=\"o\">=</span> <span class=\"kc\">None</span><span class=\"p\">):</span>\n        <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">vectors</span> <span class=\"o\">=</span> <span class=\"n\">defaultdict</span><span class=\"p\">(</span><span class=\"n\">np</span><span class=\"o\">.</span><span class=\"n\">array</span><span class=\"p\">)</span>\n        <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">embedding_model</span> <span class=\"o\">=</span> <span class=\"n\">embedding_model</span> <span class=\"ow\">or</span> <span class=\"n\">EmbeddingModel</span><span class=\"p\">()</span>\n</code></pre></div>\n<span class=\"paragraph\">As you can see - our vectors are merely stored as a dictionary of <code>np.array</code> objects.</span>\n<span class=\"paragraph\">Secondly, our <code>VectorDatabase()</code> has a default <code>EmbeddingModel()</code> which is a wrapper for OpenAI's <code>text-embedding-3-small</code> model.</span>\n<blockquote>\n<span class=\"paragraph\"><strong>Quick Info About <code>text-embedding-3-small</code></strong>:\n- It has a context window of <strong>8191</strong> tokens\n- It returns vectors with dimension <strong>1536</strong></span>\n</blockquote></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "DnEU",
+      "code_hash": "9f24ba1552388573a19c6afbc106f071",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h4 id=\"question-1\">\u2753Question #1:</h4>\n<span class=\"paragraph\">The default embedding dimension of <code>text-embedding-3-small</code> is 1536, as noted above.</span>\n<ol>\n<li>Is there any way to modify this dimension?</li>\n<li>What technique does OpenAI use to achieve this?</li>\n</ol>\n<blockquote>\n<span class=\"paragraph\">NOTE: Check out this <a href=\"https://platform.openai.com/docs/api-reference/embeddings/create\" rel=\"noopener noreferrer\" target=\"_blank\">API documentation</a> for the answer to question #1.1, and <a href=\"https://arxiv.org/abs/2205.13147\" rel=\"noopener noreferrer\" target=\"_blank\">this paper</a> for an answer to question #1.2!</span>\n</blockquote></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ulZA",
+      "code_hash": "68b9b7979a2d7fa7f758ecf1e76c5296",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h5 id=\"answer\">\u2705 Answer:</h5>\n<ol>\n<li>Yes,</li>\n</ol>\n<div class=\"language-text codehilite\"><pre><span></span><code>dimensions\ninteger\nOptional\nThe number of dimensions the resulting output embeddings should have. Only supported in text-embedding-3 and later models.\n</code></pre></div>\n<ol start=\"2\">\n<li>Matryoshka</li>\n</ol></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ecfG",
+      "code_hash": "a162c269281415c7075deae8279e7ac2",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">We can call the <code>async_get_embeddings</code> method of our <code>EmbeddingModel()</code> on a list of <code>str</code> and receive a list of <code>float</code> back!</span>\n<div class=\"language-python codehilite\"><pre><span></span><code><span class=\"k\">async</span> <span class=\"k\">def</span><span class=\"w\"> </span><span class=\"nf\">async_get_embeddings</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"n\">list_of_text</span><span class=\"p\">:</span> <span class=\"n\">List</span><span class=\"p\">[</span><span class=\"nb\">str</span><span class=\"p\">])</span> <span class=\"o\">-&gt;</span> <span class=\"n\">List</span><span class=\"p\">[</span><span class=\"n\">List</span><span class=\"p\">[</span><span class=\"nb\">float</span><span class=\"p\">]]:</span>\n        <span class=\"k\">return</span> <span class=\"k\">await</span> <span class=\"n\">aget_embeddings</span><span class=\"p\">(</span>\n            <span class=\"n\">list_of_text</span><span class=\"o\">=</span><span class=\"n\">list_of_text</span><span class=\"p\">,</span> <span class=\"n\">engine</span><span class=\"o\">=</span><span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">embeddings_model_name</span>\n        <span class=\"p\">)</span>\n</code></pre></div></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Pvdt",
+      "code_hash": "641ff1c52d4270cab9b0356f2d5ea19c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">We cast those to <code>np.array</code> when we build our <code>VectorDatabase()</code>:</span>\n<div class=\"language-python codehilite\"><pre><span></span><code><span class=\"k\">async</span> <span class=\"k\">def</span><span class=\"w\"> </span><span class=\"nf\">abuild_from_list</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"n\">list_of_text</span><span class=\"p\">:</span> <span class=\"n\">List</span><span class=\"p\">[</span><span class=\"nb\">str</span><span class=\"p\">])</span> <span class=\"o\">-&gt;</span> <span class=\"s2\">&quot;VectorDatabase&quot;</span><span class=\"p\">:</span>\n        <span class=\"n\">embeddings</span> <span class=\"o\">=</span> <span class=\"k\">await</span> <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">embedding_model</span><span class=\"o\">.</span><span class=\"n\">async_get_embeddings</span><span class=\"p\">(</span><span class=\"n\">list_of_text</span><span class=\"p\">)</span>\n        <span class=\"k\">for</span> <span class=\"n\">text</span><span class=\"p\">,</span> <span class=\"n\">embedding</span> <span class=\"ow\">in</span> <span class=\"nb\">zip</span><span class=\"p\">(</span><span class=\"n\">list_of_text</span><span class=\"p\">,</span> <span class=\"n\">embeddings</span><span class=\"p\">):</span>\n            <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">insert</span><span class=\"p\">(</span><span class=\"n\">text</span><span class=\"p\">,</span> <span class=\"n\">np</span><span class=\"o\">.</span><span class=\"n\">array</span><span class=\"p\">(</span><span class=\"n\">embedding</span><span class=\"p\">))</span>\n        <span class=\"k\">return</span> <span class=\"bp\">self</span>\n</code></pre></div>\n<span class=\"paragraph\">And that's all we need to do!</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "aLJB",
+      "code_hash": "b31ab24ea9fa6791fcf676e621a28b54",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h4 id=\"question-2\">\u2753Question #2:</h4>\n<span class=\"paragraph\">What are the benefits of using an <code>async</code> approach to collecting our embeddings?</span>\n<blockquote>\n<span class=\"paragraph\">NOTE: Determining the core difference between <code>async</code> and <code>sync</code> will be useful! If you get stuck - ask ChatGPT!</span>\n</blockquote></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "nHfw",
+      "code_hash": "6381f493fd57057620452e24ea3a29df",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h5 id=\"answer-it-allows-us-to-wait-for-embeddings-to-be-returned-and-to-possibly-execute-other-non-dependent-code-while-were-waiting-instead-of-erroring-out-immediately\">\u2705 Answer: It allows us to wait for embeddings to be returned (and to possibly execute other non-dependent code while we're waiting) instead of erroring out immediately.</h5></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "xXTn",
+      "code_hash": "022d917c386629e08549e299d71ae0f3",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">So, to review what we've done so far in natural language:</span>\n<ol>\n<li>We load source documents</li>\n<li>We split those source documents into smaller chunks (documents)</li>\n<li>We send each of those documents to the <code>text-embedding-3-small</code> OpenAI API endpoint</li>\n<li>We store each of the text representations with the vector representations as keys/values in a dictionary</li>\n</ol></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "AjVT",
+      "code_hash": "eb060d3b95f3580eae4c692f7c54fd46",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"semantic-similarity\">Semantic Similarity</h3>\n<span class=\"paragraph\">The next step is to be able to query our <code>VectorDatabase()</code> with a <code>str</code> and have it return to us vectors and text that is most relevant from our corpus.</span>\n<span class=\"paragraph\">We're going to use the following process to achieve this in our toy example:</span>\n<ol>\n<li>We need to embed our query with the same <code>EmbeddingModel()</code> as we used to construct our <code>VectorDatabase()</code></li>\n<li>We loop through every vector in our <code>VectorDatabase()</code> and use a distance measure to compare how related they are</li>\n<li>We return a list of the top <code>k</code> closest vectors, with their text representations</li>\n</ol>\n<span class=\"paragraph\">There's some very heavy optimization that can be done at each of these steps - but let's just focus on the basic pattern in this notebook.</span>\n<blockquote>\n<span class=\"paragraph\">We are using <a href=\"https://www.engati.com/glossary/cosine-similarity\" rel=\"noopener noreferrer\" target=\"_blank\">cosine similarity</a> as a distance metric in this example - but there are many many distance metrics you could use - like <a href=\"https://flavien-vidal.medium.com/similarity-distances-for-natural-language-processing-16f63cd5ba55\" rel=\"noopener noreferrer\" target=\"_blank\">these</a></span>\n<span class=\"paragraph\">We are using a rather inefficient way of calculating relative distance between the query vector and all other vectors - there are more advanced approaches that are much more efficient, like <a href=\"https://towardsdatascience.com/comprehensive-guide-to-approximate-nearest-neighbors-algorithms-8b94f057d6b6\" rel=\"noopener noreferrer\" target=\"_blank\">ANN</a></span>\n</blockquote></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "NCOB",
+      "code_hash": "756a1970c5337d3ad3bf28c47a8b4f0b",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-4-prompts\">Task 4: Prompts</h2>\n<span class=\"paragraph\">In the following section, we'll be looking at the role of prompts - and how they help us to guide our application in the right direction.</span>\n<span class=\"paragraph\">In this notebook, we're going to rely on the idea of \"zero-shot in-context learning\".</span>\n<span class=\"paragraph\">This is a lot of words to say: \"We will ask it to perform our desired task in the prompt, and provide no examples.\"</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "aqbW",
+      "code_hash": "99fdfc504ca440f2922102da4a02dcc5",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"xyzroleprompt\">XYZRolePrompt</h3>\n<span class=\"paragraph\">Before we do that, let's stop and think a bit about how OpenAI's chat models work.</span>\n<span class=\"paragraph\">We know they have roles - as is indicated in the following API <a href=\"https://platform.openai.com/docs/api-reference/chat/create#chat/create-messages\" rel=\"noopener noreferrer\" target=\"_blank\">documentation</a></span>\n<span class=\"paragraph\">There are three roles, and they function as follows (taken directly from <a href=\"https://platform.openai.com/docs/guides/gpt/chat-completions-api\" rel=\"noopener noreferrer\" target=\"_blank\">OpenAI</a>):</span>\n<ul>\n<li><code>{\"role\" : \"system\"}</code> : The system message helps set the behavior of the assistant. For example, you can modify the personality of the assistant or provide specific instructions about how it should behave throughout the conversation. However note that the system message is optional and the model\u2019s behavior without a system message is likely to be similar to using a generic message such as \"You are a helpful assistant.\"</li>\n<li><code>{\"role\" : \"user\"}</code> : The user messages provide requests or comments for the assistant to respond to.</li>\n<li><code>{\"role\" : \"assistant\"}</code> : Assistant messages store previous assistant responses, but can also be written by you to give examples of desired behavior.</li>\n</ul>\n<span class=\"paragraph\">The main idea is this:</span>\n<ol>\n<li>You start with a system message that outlines how the LLM should respond, what kind of behaviours you can expect from it, and more</li>\n<li>Then, you can provide a few examples in the form of \"assistant\"/\"user\" pairs</li>\n<li>Then, you prompt the model with the true \"user\" message.</li>\n</ol>\n<span class=\"paragraph\">In this example, we'll be forgoing the 2nd step for simplicity's sake.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TRpd",
+      "code_hash": "7083a1bec15c26a81d7aacb4fc06a051",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h4 id=\"utility-functions\">Utility Functions</h4>\n<span class=\"paragraph\">You'll notice that we're using some utility functions from the <code>aimakerspace</code> module - let's take a peek at these and see what they're doing!</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TXez",
+      "code_hash": "621e91f4785e7ee030646230776a8c4d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h5 id=\"xyzroleprompt\">XYZRolePrompt</h5></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "dNNg",
+      "code_hash": "bb9f39303c1ed96139e5248d1d9b26eb",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Here we have our <code>system</code>, <code>user</code>, and <code>assistant</code> role prompts.</span>\n<span class=\"paragraph\">Let's take a peek at what they look like:</span>\n<div class=\"language-python codehilite\"><pre><span></span><code><span class=\"k\">class</span><span class=\"w\"> </span><span class=\"nc\">BasePrompt</span><span class=\"p\">:</span>\n    <span class=\"k\">def</span><span class=\"w\"> </span><span class=\"fm\">__init__</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"n\">prompt</span><span class=\"p\">):</span>\n        \\<span class=\"s2\">&quot;</span><span class=\"se\">\\&quot;\\&quot;</span>\n        <span class=\"n\">Initializes</span> <span class=\"n\">the</span> <span class=\"n\">BasePrompt</span> <span class=\"nb\">object</span> <span class=\"k\">with</span> <span class=\"n\">a</span> <span class=\"n\">prompt</span> <span class=\"n\">template</span><span class=\"o\">.</span>\n\n        <span class=\"p\">:</span><span class=\"n\">param</span> <span class=\"n\">prompt</span><span class=\"p\">:</span> <span class=\"n\">A</span> <span class=\"n\">string</span> <span class=\"n\">that</span> <span class=\"n\">can</span> <span class=\"n\">contain</span> <span class=\"n\">placeholders</span> <span class=\"n\">within</span> <span class=\"n\">curly</span> <span class=\"n\">braces</span>\n        \\<span class=\"s2\">&quot;</span><span class=\"se\">\\&quot;\\&quot;</span>\n        <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">prompt</span> <span class=\"o\">=</span> <span class=\"n\">prompt</span>\n        <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">_pattern</span> <span class=\"o\">=</span> <span class=\"n\">re</span><span class=\"o\">.</span><span class=\"n\">compile</span><span class=\"p\">(</span><span class=\"sa\">r</span><span class=\"s2\">&quot;\\{([^}]+)\\}&quot;</span><span class=\"p\">)</span>\n\n    <span class=\"k\">def</span><span class=\"w\"> </span><span class=\"nf\">format_prompt</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"o\">**</span><span class=\"n\">kwargs</span><span class=\"p\">):</span>\n        \\<span class=\"s2\">&quot;</span><span class=\"se\">\\&quot;\\&quot;</span>\n        <span class=\"n\">Formats</span> <span class=\"n\">the</span> <span class=\"n\">prompt</span> <span class=\"n\">string</span> <span class=\"n\">using</span> <span class=\"n\">the</span> <span class=\"n\">keyword</span> <span class=\"n\">arguments</span> <span class=\"n\">provided</span><span class=\"o\">.</span>\n\n        <span class=\"p\">:</span><span class=\"n\">param</span> <span class=\"n\">kwargs</span><span class=\"p\">:</span> <span class=\"n\">The</span> <span class=\"n\">values</span> <span class=\"n\">to</span> <span class=\"n\">substitute</span> <span class=\"n\">into</span> <span class=\"n\">the</span> <span class=\"n\">prompt</span> <span class=\"n\">string</span>\n        <span class=\"p\">:</span><span class=\"k\">return</span><span class=\"p\">:</span> <span class=\"n\">The</span> <span class=\"n\">formatted</span> <span class=\"n\">prompt</span> <span class=\"n\">string</span>\n        \\<span class=\"s2\">&quot;</span><span class=\"se\">\\&quot;\\&quot;</span>\n        <span class=\"n\">matches</span> <span class=\"o\">=</span> <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">_pattern</span><span class=\"o\">.</span><span class=\"n\">findall</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">prompt</span><span class=\"p\">)</span>\n        <span class=\"k\">return</span> <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">prompt</span><span class=\"o\">.</span><span class=\"n\">format</span><span class=\"p\">(</span><span class=\"o\">**</span><span class=\"p\">{</span><span class=\"n\">match</span><span class=\"p\">:</span> <span class=\"n\">kwargs</span><span class=\"o\">.</span><span class=\"n\">get</span><span class=\"p\">(</span><span class=\"n\">match</span><span class=\"p\">,</span> <span class=\"s2\">&quot;</span><span class=\"se\">\\&quot;</span><span class=\"s2\">) for match in matches})</span>\n\n    <span class=\"k\">def</span><span class=\"w\"> </span><span class=\"nf\">get_input_variables</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">):</span>\n        \\<span class=\"s2\">&quot;</span><span class=\"se\">\\&quot;\\&quot;</span>\n        <span class=\"n\">Gets</span> <span class=\"n\">the</span> <span class=\"nb\">list</span> <span class=\"n\">of</span> <span class=\"nb\">input</span> <span class=\"n\">variable</span> <span class=\"n\">names</span> <span class=\"kn\">from</span><span class=\"w\"> </span><span class=\"nn\">the</span> <span class=\"n\">prompt</span> <span class=\"n\">string</span><span class=\"o\">.</span>\n\n        <span class=\"p\">:</span><span class=\"k\">return</span><span class=\"p\">:</span> <span class=\"n\">List</span> <span class=\"n\">of</span> <span class=\"nb\">input</span> <span class=\"n\">variable</span> <span class=\"n\">names</span>\n        \\<span class=\"s2\">&quot;</span><span class=\"se\">\\&quot;\\&quot;</span>\n        <span class=\"k\">return</span> <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">_pattern</span><span class=\"o\">.</span><span class=\"n\">findall</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">prompt</span><span class=\"p\">)</span>\n</code></pre></div>\n<span class=\"paragraph\">Then we have our <code>RolePrompt</code> which laser focuses us on the role pattern found in most API endpoints for LLMs.</span>\n<div class=\"language-python codehilite\"><pre><span></span><code><span class=\"k\">class</span><span class=\"w\"> </span><span class=\"nc\">RolePrompt</span><span class=\"p\">(</span><span class=\"n\">BasePrompt</span><span class=\"p\">):</span>\n    <span class=\"k\">def</span><span class=\"w\"> </span><span class=\"fm\">__init__</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"n\">prompt</span><span class=\"p\">,</span> <span class=\"n\">role</span><span class=\"p\">:</span> <span class=\"nb\">str</span><span class=\"p\">):</span>\n        \\<span class=\"s2\">&quot;</span><span class=\"se\">\\&quot;\\&quot;</span>\n        <span class=\"n\">Initializes</span> <span class=\"n\">the</span> <span class=\"n\">RolePrompt</span> <span class=\"nb\">object</span> <span class=\"k\">with</span> <span class=\"n\">a</span> <span class=\"n\">prompt</span> <span class=\"n\">template</span> <span class=\"ow\">and</span> <span class=\"n\">a</span> <span class=\"n\">role</span><span class=\"o\">.</span>\n\n        <span class=\"p\">:</span><span class=\"n\">param</span> <span class=\"n\">prompt</span><span class=\"p\">:</span> <span class=\"n\">A</span> <span class=\"n\">string</span> <span class=\"n\">that</span> <span class=\"n\">can</span> <span class=\"n\">contain</span> <span class=\"n\">placeholders</span> <span class=\"n\">within</span> <span class=\"n\">curly</span> <span class=\"n\">braces</span>\n        <span class=\"p\">:</span><span class=\"n\">param</span> <span class=\"n\">role</span><span class=\"p\">:</span> <span class=\"n\">The</span> <span class=\"n\">role</span> <span class=\"k\">for</span> <span class=\"n\">the</span> <span class=\"n\">message</span> <span class=\"p\">(</span><span class=\"s1\">&#39;system&#39;</span><span class=\"p\">,</span> <span class=\"s1\">&#39;user&#39;</span><span class=\"p\">,</span> <span class=\"ow\">or</span> <span class=\"s1\">&#39;assistant&#39;</span><span class=\"p\">)</span>\n        \\<span class=\"s2\">&quot;</span><span class=\"se\">\\&quot;\\&quot;</span>\n        <span class=\"nb\">super</span><span class=\"p\">()</span><span class=\"o\">.</span><span class=\"fm\">__init__</span><span class=\"p\">(</span><span class=\"n\">prompt</span><span class=\"p\">)</span>\n        <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">role</span> <span class=\"o\">=</span> <span class=\"n\">role</span>\n\n    <span class=\"k\">def</span><span class=\"w\"> </span><span class=\"nf\">create_message</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"o\">**</span><span class=\"n\">kwargs</span><span class=\"p\">):</span>\n        \\<span class=\"s2\">&quot;</span><span class=\"se\">\\&quot;\\&quot;</span>\n        <span class=\"n\">Creates</span> <span class=\"n\">a</span> <span class=\"n\">message</span> <span class=\"n\">dictionary</span> <span class=\"k\">with</span> <span class=\"n\">a</span> <span class=\"n\">role</span> <span class=\"ow\">and</span> <span class=\"n\">a</span> <span class=\"n\">formatted</span> <span class=\"n\">message</span><span class=\"o\">.</span>\n\n        <span class=\"p\">:</span><span class=\"n\">param</span> <span class=\"n\">kwargs</span><span class=\"p\">:</span> <span class=\"n\">The</span> <span class=\"n\">values</span> <span class=\"n\">to</span> <span class=\"n\">substitute</span> <span class=\"n\">into</span> <span class=\"n\">the</span> <span class=\"n\">prompt</span> <span class=\"n\">string</span>\n        <span class=\"p\">:</span><span class=\"k\">return</span><span class=\"p\">:</span> <span class=\"n\">Dictionary</span> <span class=\"n\">containing</span> <span class=\"n\">the</span> <span class=\"n\">role</span> <span class=\"ow\">and</span> <span class=\"n\">the</span> <span class=\"n\">formatted</span> <span class=\"n\">message</span>\n        \\<span class=\"s2\">&quot;</span><span class=\"se\">\\&quot;\\&quot;</span>\n        <span class=\"k\">return</span> <span class=\"p\">{</span><span class=\"s2\">&quot;role&quot;</span><span class=\"p\">:</span> <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">role</span><span class=\"p\">,</span> <span class=\"s2\">&quot;content&quot;</span><span class=\"p\">:</span> <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">format_prompt</span><span class=\"p\">(</span><span class=\"o\">**</span><span class=\"n\">kwargs</span><span class=\"p\">)}</span>\n</code></pre></div>\n<span class=\"paragraph\">We'll look at how the <code>SystemRolePrompt</code> is constructed to get a better idea of how that extension works:</span>\n<div class=\"language-python codehilite\"><pre><span></span><code><span class=\"k\">class</span><span class=\"w\"> </span><span class=\"nc\">SystemRolePrompt</span><span class=\"p\">(</span><span class=\"n\">RolePrompt</span><span class=\"p\">):</span>\n    <span class=\"k\">def</span><span class=\"w\"> </span><span class=\"fm\">__init__</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"n\">prompt</span><span class=\"p\">:</span> <span class=\"nb\">str</span><span class=\"p\">):</span>\n        <span class=\"nb\">super</span><span class=\"p\">()</span><span class=\"o\">.</span><span class=\"fm\">__init__</span><span class=\"p\">(</span><span class=\"n\">prompt</span><span class=\"p\">,</span> <span class=\"s2\">&quot;system&quot;</span><span class=\"p\">)</span>\n</code></pre></div>\n<span class=\"paragraph\">That pattern is repeated for our <code>UserRolePrompt</code> and our <code>AssistantRolePrompt</code> as well.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "yCnT",
+      "code_hash": "28f0913039834b3aa901327f0a6fc489",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h5 id=\"chatopenai\">ChatOpenAI</h5></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "wlCL",
+      "code_hash": "47efbe4da074bd11167b7f223d72e230",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Next we have our model, which is converted to a format analogous to libraries like LangChain and LlamaIndex.</span>\n<span class=\"paragraph\">Let's take a peek at how that is constructed:</span>\n<div class=\"language-python codehilite\"><pre><span></span><code><span class=\"k\">class</span><span class=\"w\"> </span><span class=\"nc\">ChatOpenAI</span><span class=\"p\">:</span>\n    <span class=\"k\">def</span><span class=\"w\"> </span><span class=\"fm\">__init__</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"n\">model_name</span><span class=\"p\">:</span> <span class=\"nb\">str</span> <span class=\"o\">=</span> <span class=\"s2\">&quot;gpt-4.1-mini&quot;</span><span class=\"p\">):</span>\n        <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">model_name</span> <span class=\"o\">=</span> <span class=\"n\">model_name</span>\n        <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">openai_api_key</span> <span class=\"o\">=</span> <span class=\"n\">os</span><span class=\"o\">.</span><span class=\"n\">getenv</span><span class=\"p\">(</span><span class=\"s2\">&quot;OPENAI_API_KEY&quot;</span><span class=\"p\">)</span>\n        <span class=\"k\">if</span> <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">openai_api_key</span> <span class=\"ow\">is</span> <span class=\"kc\">None</span><span class=\"p\">:</span>\n            <span class=\"k\">raise</span> <span class=\"ne\">ValueError</span><span class=\"p\">(</span><span class=\"s2\">&quot;OPENAI_API_KEY is not set&quot;</span><span class=\"p\">)</span>\n\n    <span class=\"k\">def</span><span class=\"w\"> </span><span class=\"nf\">run</span><span class=\"p\">(</span><span class=\"bp\">self</span><span class=\"p\">,</span> <span class=\"n\">messages</span><span class=\"p\">,</span> <span class=\"n\">text_only</span><span class=\"p\">:</span> <span class=\"nb\">bool</span> <span class=\"o\">=</span> <span class=\"kc\">True</span><span class=\"p\">):</span>\n        <span class=\"k\">if</span> <span class=\"ow\">not</span> <span class=\"nb\">isinstance</span><span class=\"p\">(</span><span class=\"n\">messages</span><span class=\"p\">,</span> <span class=\"nb\">list</span><span class=\"p\">):</span>\n            <span class=\"k\">raise</span> <span class=\"ne\">ValueError</span><span class=\"p\">(</span><span class=\"s2\">&quot;messages must be a list&quot;</span><span class=\"p\">)</span>\n\n        <span class=\"n\">openai</span><span class=\"o\">.</span><span class=\"n\">api_key</span> <span class=\"o\">=</span> <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">openai_api_key</span>\n        <span class=\"n\">response</span> <span class=\"o\">=</span> <span class=\"n\">openai</span><span class=\"o\">.</span><span class=\"n\">ChatCompletion</span><span class=\"o\">.</span><span class=\"n\">create</span><span class=\"p\">(</span>\n            <span class=\"n\">model</span><span class=\"o\">=</span><span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">model_name</span><span class=\"p\">,</span> <span class=\"n\">messages</span><span class=\"o\">=</span><span class=\"n\">messages</span>\n        <span class=\"p\">)</span>\n\n        <span class=\"k\">if</span> <span class=\"n\">text_only</span><span class=\"p\">:</span>\n            <span class=\"k\">return</span> <span class=\"n\">response</span><span class=\"o\">.</span><span class=\"n\">choices</span><span class=\"p\">[</span><span class=\"mi\">0</span><span class=\"p\">]</span><span class=\"o\">.</span><span class=\"n\">message</span><span class=\"o\">.</span><span class=\"n\">content</span>\n\n        <span class=\"k\">return</span> <span class=\"n\">response</span>\n</code></pre></div></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "kqZH",
+      "code_hash": "b7eb23d780b31fda88b571a754ed6a3e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h4 id=\"question-3\">\u2753 Question #3:</h4>\n<span class=\"paragraph\">When calling the OpenAI API - are there any ways we can achieve more reproducible outputs?</span>\n<blockquote>\n<span class=\"paragraph\">NOTE: Check out <a href=\"https://platform.openai.com/docs/guides/text-generation/\" rel=\"noopener noreferrer\" target=\"_blank\">this section</a> of the OpenAI documentation for the answer!</span>\n</blockquote></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "wAgl",
+      "code_hash": "66bd34e99dec88df50bbc4a6dde2fc57",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h5 id=\"answer-yes-we-can-submit-context-free-grammars-to-get-structured-outputs-or-we-can-let-them-do-the-structured-outputs-on-their-end-whatever-floats-your-boat-ig\">\u2705 Answer: Yes, we can submit context-free grammars to get structured outputs! Or we can let them do the structured outputs on their end, whatever floats your boat ig</h5></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "rEll",
+      "code_hash": "45bfe57ed39de83eedad2d7d9bae3db4",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"creating-and-prompting-openais-gpt-41-mini\">Creating and Prompting OpenAI's <code>gpt-4.1-mini</code>!</h3>\n<span class=\"paragraph\">Let's tie all these together and use it to prompt <code>gpt-4.1-mini</code>!</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lgWD",
+      "code_hash": "87400ff16abf0f04e113aad6fed4fc6d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-5-retrieval-augmented-generation\">Task 5: Retrieval Augmented Generation</h2>\n<span class=\"paragraph\">Now we can create a RAG prompt - which will help our system behave in a way that makes sense!</span>\n<span class=\"paragraph\">There is much you could do here, many tweaks and improvements to be made!</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "fwwy",
+      "code_hash": "eb3bdb54e6f7f1d96a621f98830a9c5e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Now we can create our pipeline!</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "jxvo",
+      "code_hash": "6c55efb2c42fd5c903f2fc2eca206d68",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h4 id=\"question-4\">\u2753 Question #4:</h4>\n<span class=\"paragraph\">What prompting strategies could you use to make the LLM have a more thoughtful, detailed response?</span>\n<span class=\"paragraph\">What is that strategy called?</span>\n<blockquote>\n<span class=\"paragraph\">NOTE: You can look through our <a href=\"https://colab.research.google.com/drive/14SCfRnp39N7aoOx8ZxadWb0hAqk4lQdL?usp=sharing\" rel=\"noopener noreferrer\" target=\"_blank\">OpenAI Responses API</a> notebook for an answer to this question if you get stuck!</span>\n</blockquote></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "mWxS",
+      "code_hash": "b0e1b3a9b77fc253ca34e8e888691bfd",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h5 id=\"answer-cot-and-derivatives-my-fav-is-thread-of-thought-self-criticism-ensembling\">\u2705 Answer: CoT (and derivatives, my fav is Thread of Thought), self-criticism, ensembling,</h5></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "CcZR",
+      "code_hash": "5cfb6f376bc9eb6965707f10dc3a7742",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"activity-1\">\ud83c\udfd7\ufe0f Activity #1:</h3>\n<span class=\"paragraph\">Enhance your Personal Wellness Assistant in some way!</span>\n<span class=\"paragraph\">Suggestions are:</span>\n<ul>\n<li><strong>PDF Support</strong>: Allow it to ingest wellness PDFs (meal plans, workout guides, medical information sheets)</li>\n<li><strong>New Distance Metric</strong>: Implement a different similarity measure - does it improve retrieval for health queries?</li>\n<li><strong>Metadata Support</strong>: Add metadata like topic categories (exercise, nutrition, sleep) or difficulty levels to help filter results</li>\n<li><strong>Different Embedding Model</strong>: Try a different embedding model - does domain-specific tuning help for health content?</li>\n<li><strong>Multi-Source Ingestion</strong>: Add the capability to ingest content from YouTube health videos, podcasts, or health blogs</li>\n</ul>\n<span class=\"paragraph\">While these are suggestions, you should feel free to make whatever augmentations you desire! Think about what features would make this wellness assistant most useful for your personal health journey.</span>\n<span class=\"paragraph\">When you're finished making the augments to your RAG application - vibe check it against the old one - see if you can \"feel the improvement\"!</span>\n<blockquote>\n<span class=\"paragraph\">NOTE: These additions might require you to work within the <code>aimakerspace</code> library - that's expected!</span>\n<span class=\"paragraph\">NOTE: If you're not sure where to start - ask Cursor (CMD/CTRL+L) to guide you through the changes!</span>\n</blockquote></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "9438963013a6b13d96b8ffdfa6920f10",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "48627971e4f4ecf9642871440510ca99",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "BYtC",
+      "code_hash": "35cb4fcc14ac15da850b03297afcc1b2",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<pre class='text-xs'>1</pre>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "RGSE",
+      "code_hash": "8183fee2dd36a251f95d48a56ba668c5",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "The Personal Wellness Guide\nA Comprehensive Resource for Health and Well-being\n\nPART 1: EXERCISE AND\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "Hstk",
+      "code_hash": "1a4fd57f4c746bef9048ff625cfd582d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<pre class='text-xs'>21</pre>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "iLit",
+      "code_hash": "9cc5a954d175cff3500956d878b81003",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "application/json": "[\"The Personal Wellness Guide\\nA Comprehensive Resource for Health and Well-being\\n\\nPART 1: EXERCISE AND MOVEMENT\\n\\nChapter 1: Understanding Exercise Basics\\n\\nExercise is one of the most important things you can do for your health. Regular physical activity can improve your brain health, help manage weight, reduce the risk of disease, strengthen bones and muscles, and improve your ability to do everyday activities.\\n\\nThe four main types of exercise are aerobic (cardio), strength training, flexibility, and balance exercises. A well-rounded fitness routine includes all four types. Adults should aim for at least 150 minutes of moderate-intensity aerobic activity per week, along with muscle-strengthening activities on 2 or more days per week.\\n\\nChapter 2: Exercises for Common Problems\\n\\nLower Back Pain Relief\\nLower back pain affects approximately 80% of adults at some point in their lives. Gentle stretching and strengthening exercises can help alleviate discomfort and prevent future episodes.\\n\\nReco\"]"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "qnkX",
+      "code_hash": "8612e9f652842a3d67329a2a7593e4f6",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/imjonezz/.local/share/uv/python/cpython-3.12.12-linux-x86_64-gnu/lib/python3.12/getpass.py:62: GetPassWarning: Can not control echo on the terminal.\n  passwd = fallback_getpass(prompt, stream)\nWarning: Password input may be echoed.\nOpenAI API Key: ",
+          "mimetype": "text/plain"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " ajaj\n",
+          "mimetype": "text/plain"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "ZBYS",
+      "code_hash": "8172c444d4bc37119e18834f8b6f069a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "pHFh",
+      "code_hash": "94a3339837764a6fd2fdd96ecd985f8b",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "application/json": "[[\" Relief\\nLower back pain affects approximately 80% of adults at some point in their lives. Gentle stretching and strengthening exercises can help alleviate discomfort and prevent future episodes.\\n\\nRecommended exercises for lower back pain include:\\n- Cat-Cow Stretch: Start on hands and knees, alternate between arching your back up (cat) and letting it sag down (cow). Do 10-15 repetitions.\\n- Bird Dog: From hands and knees, extend opposite arm and leg while keeping your core engaged. Hold for 5 seconds, then switch sides. Do 10 repetitions per side.\\n- Partial Crunches: Lie on your back with knees bent, cross arms over chest, tighten stomach muscles and raise shoulders off floor. Hold briefly, then lower. Do 8-12 repetitions.\\n- Knee-to-Chest Stretch: Lie on your back, pull one knee toward your chest while keeping the other foot flat. Hold for 15-30 seconds, then switch legs.\\n- Pelvic Tilts: Lie on your back with knees bent, flatten your back against the floor by tightening abs and tilting p\", \"text/plain+float:0.7510530552519835\"], [\"The Personal Wellness Guide\\nA Comprehensive Resource for Health and Well-being\\n\\nPART 1: EXERCISE AND MOVEMENT\\n\\nChapter 1: Understanding Exercise Basics\\n\\nExercise is one of the most important things you can do for your health. Regular physical activity can improve your brain health, help manage weight, reduce the risk of disease, strengthen bones and muscles, and improve your ability to do everyday activities.\\n\\nThe four main types of exercise are aerobic (cardio), strength training, flexibility, and balance exercises. A well-rounded fitness routine includes all four types. Adults should aim for at least 150 minutes of moderate-intensity aerobic activity per week, along with muscle-strengthening activities on 2 or more days per week.\\n\\nChapter 2: Exercises for Common Problems\\n\\nLower Back Pain Relief\\nLower back pain affects approximately 80% of adults at some point in their lives. Gentle stretching and strengthening exercises can help alleviate discomfort and prevent future episodes.\\n\\nReco\", \"text/plain+float:0.4883259313072032\"], [\"chest while keeping the other foot flat. Hold for 15-30 seconds, then switch legs.\\n- Pelvic Tilts: Lie on your back with knees bent, flatten your back against the floor by tightening abs and tilting pelvis up slightly. Hold for 10 seconds, repeat 8-12 times.\\n\\nNeck and Shoulder Tension\\nDesk work and poor posture often lead to neck and shoulder tension. These exercises can provide relief:\\n- Neck Rolls: Slowly roll your head in a circle, 5 times in each direction.\\n- Shoulder Shrugs: Raise shoulders toward ears, hold for 5 seconds, then release. Repeat 10 times.\\n- Chest Opener: Clasp hands behind back, squeeze shoulder blades together, and lift arms slightly. Hold for 15-30 seconds.\\n- Chin Tucks: While sitting or standing tall, pull your chin back to create a \\\"double chin.\\\" Hold for 5 seconds, repeat 10 times.\\n\\nChapter 3: Building a Workout Routine\\n\\nStarting a new exercise routine can feel overwhelming. The key is to start slowly and gradually increase intensity and duration over time.\\n\\nBe\", \"text/plain+float:0.4654981355258454\"]]"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "dGlV",
+      "code_hash": "bae3e67fa683d4484babdb9aa275ceab",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "SdmI",
+      "code_hash": "07fabe2f5d580c672f857f93419899c0",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "## \ud83d\udc0d The \u201cBest\u201d Way to Write a Loop in Python  \n*(and why the \u201cbest\u201d choice really depends on what you\u2019re trying to do)*  \n\n---\n\n### 1\ufe0f\u20e3 Start with **readability** \u2013 it\u2019s more important than cleverness\n\n```python\n# Good: clear intent, short & expressive\nfor name in names:\n    print(name.upper())\n```\n\nvs.\n\n```python\n# Harder to read for someone else (or future you)\ni = 0\nwhile i < len(names):\n    print(names[i].upper())\n    i += 1\n```\n\nIf a loop can be expressed with a single, well\u2011named line, that\u2019s usually the winner.\n\n---\n\n### 2\ufe0f\u20e3 Choose the right looping construct\n\n| Situation | Recommended construct | Why |\n|-----------|-----------------------|-----|\n| **Iterate over items of an iterable** (list, tuple, set, dict keys, file lines\u2026) | `for item in iterable:` | Simple, Pythonic, works with any iterator. |\n| **Need the index *and* the value** | `for i, val in enumerate(seq):` | No manual counter management; works on any sequence. |\n| **Iterate over two (or more) sequences in parallel** | `for a, b in zip(seq1, seq2):` | Stops at the shortest iterable automatically. |\n| **Transform one collection into another** | List / dict / set comprehension | Concise, often faster because it\u2019s implemented in C. |\n| **Huge data \u2013 you don\u2019t want everything in memory** | Generator expression or `yield` inside a function | Produces items lazily; perfect for pipelines. |\n| **Repeat until a condition that isn\u2019t just \u201cover the collection\u201d** | `while <condition>:` (or `while True: \u2026 break`) | Use only when you truly need an open\u2011ended loop. |\n| **Search for something and stop early** | `for ...: if found: break` | Avoid unnecessary work; keep the loop short. |\n\n---\n\n### 3\ufe0f\u20e3 Common \u201cloop patterns\u201d with idiomatic Python\n\n#### a) Simple `for` loop  \n\n```python\ntotal = 0\nfor n in range(1, 11):          # 1 \u2026 10 inclusive\n    total += n\nprint(total)                    # 55\n```\n\n#### b) Using `enumerate` for index + value  \n\n```python\nwords = [\"apple\", \"banana\", \"cherry\"]\nfor idx, word in enumerate(words, start=1):\n    print(f\"{idx}. {word.title()}\")\n```\n\n#### c) Parallel iteration with `zip`  \n\n```python\nnames = [\"Alice\", \"Bob\", \"Cathy\"]\nscores = [85, 92, 78]\n\nfor name, score in zip(names, scores):\n    print(f\"{name} scored {score}\")\n```\n\n#### d) List comprehension (when you just need a new list)\n\n```python\nsquares = [x**2 for x in range(1, 11)]\n# \u2192 [1, 4, 9, \u2026, 100]\n```\n\n#### e) Generator expression (lazy version of a comprehension)\n\n```python\nimport math\n\ndef prime_generator(limit):\n    \"\"\"Yield primes up to `limit` without storing them all.\"\"\"\n    for n in range(2, limit + 1):\n        if all(n % d != 0 for d in range(2, int(math.sqrt(n)) + 1)):\n            yield n\n\n# Use it:\nfor p in prime_generator(50):\n    print(p)\n```\n\n#### f) `while` loop with a clear exit condition  \n\n```python\nguess = None\nsecret = 42\n\nwhile guess != secret:\n    guess = int(input(\"Your guess? \"))\n    if guess < secret:\n        print(\"Too low!\")\n    elif guess > secret:\n        print(\"Too high!\")\n\nprint(\"You got it! \ud83c\udf89\")\n```\n\n> **Tip:** Put the condition that *ends* the loop (`guess == secret`) in the `while` line, not inside the body. It makes the exit logic obvious.\n\n---\n\n### 4\ufe0f\u20e3 Avoid common pitfalls\n\n| Pitfall | Why it\u2019s a problem | Safer alternative |\n|---------|-------------------|-------------------|\n| **Modifying a list while iterating over it** | Skips elements or raises unexpected errors | Iterate over a copy (`for x in lst[:]`) or build a new list. |\n| **Using `range(len(seq))` and indexing** | Makes code noisier & error\u2011prone (off\u2011by\u2011one) | Use direct iteration (`for item in seq:`) or `enumerate`. |\n| **Infinite loops without an obvious break** | Can hang your program / consume CPU forever | Write the exit condition explicitly; consider a safety counter. |\n| **Deeply nested loops with many levels of indentation** | Hard to read and maintain | Extract inner logic into helper functions or use itertools (`product`, `combinations`). |\n| **Repeated attribute look\u2011ups inside hot loops** | Slight performance hit (especially in tight C\u2011loops) | Cache the attribute locally: `obj = big_obj.attribute` before the loop. |\n\n---\n\n### 5\ufe0f\u20e3 Performance & micro\u2011optimizations (only when needed)\n\n1. **Local variable binding** \u2013 Python looks up locals faster than globals.\n\n   ```python\n   # Faster:\n   append = my_list.append\n   for x in data:\n       append(x * 2)\n   ```\n\n2. **Use built\u2011ins and comprehensions** \u2013 they\u2019re implemented in C and often outpace hand\u2011rolled loops.\n\n   ```python\n   # Slower (Python loop):\n   result = []\n   for i in range(1000000):\n       result.append(i*i)\n\n   # Faster:\n   result = [i*i for i in range(1000000)]\n   ```\n\n3. **Avoid unnecessary `list()` conversion** \u2013 if you only need to iterate, keep the object lazy.\n\n   ```python\n   # Bad (materializes whole generator):\n   for x in list(some_generator()):\n       ...\n\n   # Good:\n   for x in some_generator():\n       ...\n   ```\n\n4. **`itertools` for complex iteration patterns** \u2013 e.g., `chain`, `islice`, `groupby`.\n\n   ```python\n   from itertools import chain\n\n   # Concatenate several iterables without building an intermediate list\n   for item in chain(list1, list2, list3):\n       process(item)\n   ```\n\n> **Remember:** Premature optimization is the root of many bugs. Write clear code first; profile only if you hit a real bottleneck.\n\n---\n\n### 6\ufe0f\u20e3 A \u201cstarter checklist\u201d before you write a loop\n\n| \u2705 Question | \u2714\ufe0f What to do |\n|------------|--------------|\n| Do I need **all** elements, or just a subset? | Filter early (`if \u2026 continue`) or use `itertools.islice`. |\n| Do I need the **index**? | Use `enumerate` (or `range(len(...))` only as a last resort). |\n| Can this be expressed with a **comprehension / map / filter**? | Try it \u2013 often one line is enough. |\n| Will the loop run on a **huge** collection? | Prefer generators or lazy iteration. |\n| Is there any **state mutation** that could affect the next iteration? | Avoid mutating the iterable you\u2019re looping over. |\n| Could this be broken into **smaller functions** for clarity? | Extract helper functions; keep each loop short (\u2264\u202f10 lines). |\n\n---\n\n## \ud83c\udfaf TL;DR \u2013 Your \u201cbest\u201d loop is the one that\n\n1. **Communicates intent clearly** (`for item in iterable:` is usually the clearest).\n2. Uses the **most expressive Python construct** (comprehensions, `enumerate`, `zip`, generators) for the task.\n3. Avoids side\u2011effects on the collection you\u2019re iterating over.\n4. Stays **readable and maintainable**; only optimize after profiling.\n\n---\n\n### Want a concrete example?\n\nSuppose you have a CSV file with user data and you need to collect the usernames of all active users, lower\u2011cased, without loading the whole file into memory:\n\n```python\nimport csv\n\ndef active_usernames(csv_path):\n    \"\"\"Yield lowercase usernames for rows where `status == 'active'`.\"\"\"\n    with open(csv_path, newline='', encoding='utf-8') as f:\n        reader = csv.DictReader(f)\n        for row in reader:                     # lazy line\u2011by\u2011line iteration\n            if row['status'].lower() != 'active':\n                continue                      # skip inactive rows early\n            yield row['username'].strip().lower()\n\n# Use it:\nfor uname in active_usernames('users.csv'):\n    print(uname)\n```\n\n*Why is this \u201cbest\u201d?*\n\n- **Lazy**: reads one line at a time.\n- **Clear intent**: the `if \u2026 continue` tells you exactly what we\u2019re filtering.\n- **No extra data structures**: `yield` creates a generator, so memory stays tiny.\n- **Readable**: each step is on its own line with descriptive names.\n\n---\n\n## \ud83d\ude4b\u200d\u2640\ufe0f Need more help?\n\nIf you have a specific scenario (e.g., looping over a nested dictionary, processing large NumPy arrays, or writing an async loop), just let me know! I\u2019ll tailor the pattern to fit your exact problem. Happy looping!\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "yOPj",
+      "code_hash": "3ed2111b4342b8d8473b871dcac0f26b",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "LJZf",
+      "code_hash": "004006d1a5df2bfb0b17a5ece598a469",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "urSm",
+      "code_hash": "671f106905d9203f82579cc57f80ace3",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Response: Here are several natural approaches that the provided material highlights for improving sleep quality:\n\n**1. Herbal teas**  \n- Drinking calming herbal teas such as **chamomile or valerian root** can promote relaxation before bed\u3010Source\u202f9\u3011.\n\n**2. Magnesium supplementation**  \n- Taking a **magnesium supplement** may help with sleep, but you should **consult a healthcare provider first** to determine the right dose and ensure it\u2019s safe for you\u3010Source\u202f9\u3011.\n\n**3. Relaxation techniques**  \n- **Progressive muscle relaxation** (systematically tensing and then releasing each muscle group) is listed as an effective natural remedy\u3010Source\u202f9\u3011.  \n- **Meditation** or mindfulness practices can also calm the mind and prepare the body for sleep\u3010Source\u202f9\u3011.\n\n**4. Cognitive\u2011behavioral therapy for insomnia (CBT\u2011I)**  \n- This structured, non\u2011pharmacologic program addresses thoughts and behaviors that interfere with sleep and is considered a natural, evidence\u2011based remedy\u3010Source\u202f9\u3011.\n\n**5. Evening wind\u2011down routine**  \nA consistent pre\u2011sleep ritual signals to your body that it\u2019s time to rest. Effective elements include:  \n\n- **Light stretching or yoga** \u2013 gentle movement helps release tension\u3010Chapter\u202f15\u3011.  \n- **Warm bath or shower** \u2013 raises body temperature slightly, then the cool\u2011down afterward promotes sleepiness\u3010Chapter\u202f15\u3011.  \n- **Reading a paper book** (instead of screens) to reduce mental stimulation\u3010Chapter\u202f15\u3011.  \n- **Journaling or gratitude practice** \u2013 helps clear the mind and lower stress\u3010Chapter\u202f15\u3011.  \n- **Relaxation exercises** such as deep breathing or guided imagery\u3010Chapter\u202f15\u3011.\n\n**6. Core sleep\u2011hygiene habits** (non\u2011medicinal but natural)  \n\n| Habit | Why it matters |\n|-------|----------------|\n| **Maintain a consistent sleep schedule**, even on weekends \u2013 stabilizes your internal clock\u3010Source\u202f1\u3011. |\n| **Limit screen exposure 1\u20132\u202fhours before bed** \u2013 reduces blue\u2011light interference with melatonin production\u3010Source\u202f1\u3011. |\n| **Avoid caffeine after 2\u202fPM** \u2013 prevents stimulant effects that can delay sleep onset\u3010Source\u202f2\u3011. |\n| **Exercise regularly, but not too close to bedtime** \u2013 promotes overall sleep quality without over\u2011arousing the body\u3010Source\u202f2\u3011. |\n| **Limit alcohol and heavy meals before bed** \u2013 reduces nighttime awakenings and digestive discomfort\u3010Source\u202f2\u3011. |\n\n**7. Optimizing the sleep environment**  \n\n- Keep bedroom temperature between **65\u201368\u202f\u00b0F (18\u201320\u202f\u00b0C)**\u3010Source\u202f1\u3011\u3010Source\u202f2\u3011.  \n- Ensure darkness with **blackout curtains or a sleep mask**\u3010Source\u202f2\u3011.  \n- Reduce noise using **white\u2011noise machines or earplugs**\u3010Source\u202f2\u3011.  \n- Invest in a comfortable **mattress and pillows** for physical support\u3010Source\u202f2\u3011.\n\n---\n\n### Gentle reminder\nWhile these natural strategies are supported by the provided wellness material, individual needs can vary. It\u2019s always wise to discuss any new supplement (e.g., magnesium) or significant lifestyle change with a qualified healthcare professional, especially if you have underlying health conditions or are taking other medications.\n\nContext Count: 3\nSimilarity Scores: ['Source 1: 0.569', 'Source 2: 0.549', 'Source 3: 0.461']\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "YWSi",
+      "code_hash": "c8ba04f0d8f394d5f45e76172c0aa699",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "application/json": "[[\"purposes. \\nPartial Stack: AWS, Sagemaker, Airflow, LlamaCPP, Ollama, Transformers, Diffusers, \\nAutomatic1111, bitsandbytes, xformers, DeepSpeed, Modelbit \\nMastercard \\nLead Data Scientist - International NLP | 11/2021 - 07/2023 \\nI trained and deployed models that created a language and bank-agnostic categorization, entity \\nresolution, and comparison space. \\nPartial Stack: Transformers, Pytorch, Optuna, Jupyter, AWS, Sagemaker, EC2, ECR, Lambda, \\nDocker \\nDuring the building of this product, we secured 2 patents, and based on the tech we built the \\nsales team was able to secure a multi-million dollar deal with a credit reporting agency for Open \\nBanking with banks using MC as a payment processor. \\nProjects \\nNational Basketball Association \\nI created a system for real-time multilingual interpretation and voice cloning for use by national \\nsports broadcasting. I completed this as a 1-month contract. This system enabled audiences to \\nhear commentators like Shaquille O'Neal and Charles Barkel\", \"text/plain+float:0.26882109258510045\"], [\"tual code \\nand practical applications rather than theory and supposed business best practices. We sold \\nmore than 1700 copies in early access (the physical copy is done but not out at the time of \\nwriting), and the GitHub repository with 48 stars containing all the code from the book can be \\nfound here: https://github.com/IMJONEZZ/LLMs-in-Production. \\nNerd United \\nMachine Learning Engineer | 07/2023 - 11/2023 \\nI used my experience as a Data Scientist to inform building an AutoML platform to automate the \\nprocess of training and evaluating models, all the way from ingesting and transforming data on \\nto deployment. I also lead the company's DevRel initiatives, using my personal brand to add \\nvalidity to company events like teaching people to train and use diffusion models for \\ntext-to-image purposes. \\nPartial Stack: AWS, Sagemaker, Airflow, LlamaCPP, Ollama, Transformers, Diffusers, \\nAutomatic1111, bitsandbytes, xformers, DeepSpeed, Modelbit \\nMastercard \\nLead Data Scientist - Internation\", \"text/plain+float:0.26104751324684605\"], [\"etation and voice cloning for use by national \\nsports broadcasting. I completed this as a 1-month contract. This system enabled audiences to \\nhear commentators like Shaquille O'Neal and Charles Barkely in near-perfect French, keeping \\ncontinuous delay under 6 seconds (total live broadcasting buffer). I also completed the drive for \\non-prem self-hosting of all services to eliminate ChatGPT or DeepL latency. \\nPartial Stack: Redis, Bespoke Translation Agent, Speculative Decoding, Whisper v3 large, \\nBespoke Voice Cloning Text-to Speech Agent \\nEducation \\nBrigham Young University \\nLinguistics | 04/2020 \\nGraduating with a BA in Linguistics and a minor in Localization while concurrently serving as an \\nAdjunct Professor for Czech and Slovak 330, I pursued an intensive course load at the \\nintersection of language and technology. An immersive study abroad in Moscow solidified my \\nRussian and localization technology experience, but it was a graduate-level seminar (Python \\nand Machine Translation),\", \"text/plain+float:0.25012717006886365\"]]"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "zlud",
+      "code_hash": "1d0db38904205bec4d6f6f6a1f6cec3e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    }
+  ]
+}
