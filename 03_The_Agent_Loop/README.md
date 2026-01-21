@@ -9,7 +9,7 @@
 
 | 📰 Session Sheet | ⏺️ Recording     | 🖼️ Slides        | 👨‍💻 Repo         | 📝 Homework      | 📁 Feedback       |
 |:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|
-|[The Agent Loop](https://github.com/AI-Maker-Space/AIE9/blob/main/00_Docs/Session_Sheets/03_The_Agent_Loop.md) | Coming soon! | Coming soon! | You are here! | Coming soon! | Coming soon! |
+| [The Agent Loop](../00_Docs/Session_Sheets/03_The_Agent_Loop.md) |[Recording!](https://us02web.zoom.us/rec/share/NdJnwKY2QF6FDaY7Bm-zj-a9rjjmckGmokKmE18jM1WwVxufvNm3igRMoguf0GDH.qb5JIlSENaTGEKxI) <br> passcode: `zD6.J*fM`| [Session 3 Slides](https://www.canva.com/design/DAG-EORuh3Y/cGsDrjkJqyVQzxGPa_YGHw/edit?utm_content=DAG-EORuh3Y&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | You are here! | [Session 3 Assignment: Agentic Loop](https://forms.gle/u6Gkpnp7MEMvYug26) | [Feedback 1/20](https://forms.gle/RR4iMFGukpKEsvEW8) |
 
 
 ### Outline:
