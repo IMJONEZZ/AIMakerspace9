@@ -2,10 +2,10 @@
 
 Quicklinks are to help you **easily navigate individual session information** for `AI Engineering`!  
 
-| 📰 Session Sheet | ⏺️ Recording  | 🖼️ Slides     | 👨‍💻 Repo     | 📝 Homework      | 📁 Feedback       |
+| 📰 Session Sheet | ⏺️ Recording | 🖼️ Slides     | 👨‍💻 Repo     | 📝 Homework      | 📁 Feedback       |
 |:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|
 | [Vibe Check!](../00_Docs/Session_Sheets/01_Vibe_Check.md) |[Recording!](https://drive.google.com/file/d/1Rsmm0Hld3WFHRxhZpEDLN_JREQ43yhwu/view?usp=drive_link) | [Session 1 Slides](https://www.canva.com/design/DAG-EBzN2PQ/gE9-Uma217yych4M7GCjSw/edit?utm_content=DAG-EBzN2PQ&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | [01_Vibe_Check](../01_Vibe_Check) | [Session 1 Assignment: Vibe Check](https://forms.gle/NeN59bCLdtXvwzVJ9) | [Feedback 1/13](https://forms.gle/1im4nmYK9cW9MFEk6) |
-|[Dense Vector Retrieval](../00_Docs/Session_Sheets/02_Dense_Vector_Retrieval.md) |[Recording!](https://us02web.zoom.us/rec/share/91RvgSsquU3LHdQIelq_XfsX_um9NrqaN5YBBBHtnUbkDLo5Ngy7otxlDGCTLBrV.zwbgMtyEdRE5dASI) (%N6ZHDEz)| [Session 2 Slides](https://www.canva.com/design/DAG-EJWkrYk/Oj3SPEB09HDScDpnEiWHMA/edit?utm_content=DAG-EJWkrYk&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | [02_Dense_Vector_Retrieval](../02_Dense_Vector_Retrieval) | [Session 2 Assignment: Pythonic RAG](https://forms.gle/WB87UU7S1vp93yUZ9) | [Feedback 1/15](https://forms.gle/9qZGU19jGmg4RZdd8) |
+|[Dense Vector Retrieval](../00_Docs/Session_Sheets/02_Dense_Vector_Retrieval.md) |[Recording!](https://us02web.zoom.us/rec/share/91RvgSsquU3LHdQIelq_XfsX_um9NrqaN5YBBBHtnUbkDLo5Ngy7otxlDGCTLBrV.zwbgMtyEdRE5dASI) <br> passcode: `%N6ZHDEz`| [Session 2 Slides](https://www.canva.com/design/DAG-EJWkrYk/Oj3SPEB09HDScDpnEiWHMA/edit?utm_content=DAG-EJWkrYk&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | [02_Dense_Vector_Retrieval](../02_Dense_Vector_Retrieval) | [Session 2 Assignment: Pythonic RAG](https://forms.gle/WB87UU7S1vp93yUZ9) | [Feedback 1/15](https://forms.gle/9qZGU19jGmg4RZdd8) |
 
 
 ## Initial Setup

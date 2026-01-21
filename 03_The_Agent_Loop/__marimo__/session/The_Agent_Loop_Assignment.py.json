@@ -1,0 +1,733 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.19.4"
+  },
+  "cells": [
+    {
+      "id": "Hbol",
+      "code_hash": "08017a9d4a5b04e9488da5f3cc16ae35",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h1 id=\"the-agent-loop-building-production-agents-with-langchain-10\">The Agent Loop: Building Production Agents with LangChain 1.0</h1>\n<span class=\"paragraph\">In this notebook, we'll explore the foundational concepts of AI agents and learn how to build production-grade agents using LangChain's new <code>create_agent</code> abstraction with middleware support.</span>\n<span class=\"paragraph\"><strong>Learning Objectives:</strong></span>\n<ul>\n<li>Understand what an \"agent\" is and how the agent loop works</li>\n<li>Learn the core constructs of LangChain (Runnables, LCEL)</li>\n<li>Master the <code>create_agent</code> function and middleware system</li>\n<li>Build an agentic RAG application using Qdrant</li>\n</ul>\n<h2 id=\"table-of-contents\">Table of Contents:</h2>\n<ul>\n<li>\n<span class=\"paragraph\"><strong>Breakout Room #1:</strong> Introduction to LangChain, LangSmith, and <code>create_agent</code></span>\n<ul>\n<li>Task 1: Dependencies</li>\n<li>Task 2: Environment Variables</li>\n<li>Task 3: LangChain Core Concepts (Runnables &amp; LCEL)</li>\n<li>Task 4: Understanding the Agent Loop</li>\n<li>Task 5: Building Your First Agent with <code>create_agent()</code></li>\n<li>Question #1 &amp; Question #2</li>\n<li>Activity #1: Create a Custom Tool</li>\n</ul>\n</li>\n<li>\n<span class=\"paragraph\"><strong>Breakout Room #2:</strong> Middleware - Agentic RAG with Qdrant</span>\n<ul>\n<li>Task 6: Loading &amp; Chunking Documents</li>\n<li>Task 7: Setting up Qdrant Vector Database</li>\n<li>Task 8: Creating a RAG Tool</li>\n<li>Task 9: Introduction to Middleware</li>\n<li>Task 10: Building Agentic RAG with Middleware</li>\n<li>Question #3 &amp; Question #4</li>\n<li>Activity #2: Enhance the Agent</li>\n</ul>\n</li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "MJUe",
+      "code_hash": "c69793fe62bad46c7092b7de29ed944b",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h1 id=\"breakout-room-1\">\ud83e\udd1d Breakout Room #1</h1>\n<h2 id=\"introduction-to-langchain-langsmith-and-create_agent\">Introduction to LangChain, LangSmith, and <code>create_agent</code></h2></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "vblA",
+      "code_hash": "a3bb194dce0b08a40340cf625cfcfe2b",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-1-dependencies\">Task 1: Dependencies</h2>\n<span class=\"paragraph\">First, let's ensure we have all the required packages installed. We'll be using:</span>\n<ul>\n<li><strong>LangChain 1.0+</strong>: The core framework with the new <code>create_agent</code> API</li>\n<li><strong>LangChain-OpenAI</strong>: OpenAI model integrations</li>\n<li><strong>LangSmith</strong>: Observability and tracing</li>\n<li><strong>Qdrant</strong>: Vector database for RAG</li>\n<li><strong>tiktoken</strong>: Token counting for text splitting</li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "e076ebcb69228ba5df2b43ca2e8994ac",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-2-environment-variables\">Task 2: Environment Variables</h2>\n<span class=\"paragraph\">We need to set up our API keys for:</span>\n<ol>\n<li><strong>OpenAI</strong> - For the GPT-5 model</li>\n<li><strong>LangFuse</strong> - For tracing and observability (self-hosted, open source)</li>\n</ol></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "RGSE",
+      "code_hash": "c149fe0ef7e51b6d0d9c4182abf0e5e9",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-3-langchain-core-concepts\">Task 3: LangChain Core Concepts</h2>\n<span class=\"paragraph\">Before diving into agents, let's understand the fundamental building blocks of LangChain.</span>\n<h3 id=\"what-is-a-runnable\">What is a Runnable?</h3>\n<span class=\"paragraph\">A <strong>Runnable</strong> is the core abstraction in LangChain - think of it as a standardized component that:</span>\n<ul>\n<li>Takes an input</li>\n<li>Performs some operation</li>\n<li>Returns an output</li>\n</ul>\n<span class=\"paragraph\">Every component in LangChain (models, prompts, retrievers, parsers) is a Runnable, which means they all share the same interface:</span>\n<div class=\"language-python codehilite\"><pre><span></span><code><span class=\"n\">result</span> <span class=\"o\">=</span> <span class=\"n\">runnable</span><span class=\"o\">.</span><span class=\"n\">invoke</span><span class=\"p\">(</span><span class=\"nb\">input</span><span class=\"p\">)</span>           <span class=\"c1\"># Single input</span>\n<span class=\"n\">results</span> <span class=\"o\">=</span> <span class=\"n\">runnable</span><span class=\"o\">.</span><span class=\"n\">batch</span><span class=\"p\">([</span><span class=\"n\">input1</span><span class=\"p\">,</span> <span class=\"n\">input2</span><span class=\"p\">])</span> <span class=\"c1\"># Multiple inputs</span>\n<span class=\"k\">for</span> <span class=\"n\">chunk</span> <span class=\"ow\">in</span> <span class=\"n\">runnable</span><span class=\"o\">.</span><span class=\"n\">stream</span><span class=\"p\">(</span><span class=\"nb\">input</span><span class=\"p\">):</span>       <span class=\"c1\"># Streaming</span>\n    <span class=\"nb\">print</span><span class=\"p\">(</span><span class=\"n\">chunk</span><span class=\"p\">)</span>\n</code></pre></div>\n<h3 id=\"what-is-lcel-langchain-expression-language\">What is LCEL (LangChain Expression Language)?</h3>\n<span class=\"paragraph\"><strong>LCEL</strong> allows you to chain Runnables together using the <code>|</code> (pipe) operator:</span>\n<div class=\"language-python codehilite\"><pre><span></span><code><span class=\"n\">chain</span> <span class=\"o\">=</span> <span class=\"n\">prompt</span> <span class=\"o\">|</span> <span class=\"n\">model</span> <span class=\"o\">|</span> <span class=\"n\">output_parser</span>\n<span class=\"n\">result</span> <span class=\"o\">=</span> <span class=\"n\">chain</span><span class=\"o\">.</span><span class=\"n\">invoke</span><span class=\"p\">({</span><span class=\"s2\">&quot;query&quot;</span><span class=\"p\">:</span> <span class=\"s2\">&quot;Hello!&quot;</span><span class=\"p\">})</span>\n</code></pre></div>\n<span class=\"paragraph\">This is similar to Unix pipes - the output of one component becomes the input to the next.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Hstk",
+      "code_hash": "bf95a8073b026eb8022f13ae15b85f36",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-4-understanding-the-agent-loop\">Task 4: Understanding the Agent Loop</h2>\n<h3 id=\"what-is-an-agent\">What is an Agent?</h3>\n<span class=\"paragraph\">An <strong>agent</strong> is a system that uses an LLM to decide what actions to take. Unlike a simple chain that follows a fixed sequence, an agent can:</span>\n<ol>\n<li><strong>Reason</strong> about what to do next</li>\n<li><strong>Take actions</strong> by calling tools</li>\n<li><strong>Observe</strong> the results</li>\n<li><strong>Iterate</strong> until the task is complete</li>\n</ol>\n<h3 id=\"the-agent-loop\">The Agent Loop</h3>\n<span class=\"paragraph\">The core of every agent is the <strong>agent loop</strong>:</span>\n<div class=\"language-ecl codehilite\"><pre><span></span><code><span class=\"w\">                          </span><span class=\"n\">AGENT</span><span class=\"w\"> </span><span class=\"nf\">LOOP</span>\n\n<span class=\"w\">      </span><span class=\"o\">+----------+</span><span class=\"w\">     </span><span class=\"o\">+----------+</span><span class=\"w\">     </span><span class=\"o\">+----------+</span>\n<span class=\"w\">      </span><span class=\"o\">|</span><span class=\"w\">  </span><span class=\"n\">Model</span><span class=\"w\">   </span><span class=\"o\">|</span><span class=\"w\"> </span><span class=\"o\">--&gt;</span><span class=\"w\"> </span><span class=\"o\">|</span><span class=\"w\">   </span><span class=\"n\">Tool</span><span class=\"w\">   </span><span class=\"o\">|</span><span class=\"w\"> </span><span class=\"o\">--&gt;</span><span class=\"w\"> </span><span class=\"o\">|</span><span class=\"w\">  </span><span class=\"n\">Model</span><span class=\"w\">   </span><span class=\"o\">|</span><span class=\"w\"> </span><span class=\"o\">--&gt;</span><span class=\"w\"> </span><span class=\"p\">...</span>\n<span class=\"w\">      </span><span class=\"o\">|</span><span class=\"w\">   </span><span class=\"n\">Call</span><span class=\"w\">   </span><span class=\"o\">|</span><span class=\"w\">     </span><span class=\"o\">|</span><span class=\"w\">   </span><span class=\"n\">Call</span><span class=\"w\">   </span><span class=\"o\">|</span><span class=\"w\">     </span><span class=\"o\">|</span><span class=\"w\">   </span><span class=\"n\">Call</span><span class=\"w\">   </span><span class=\"o\">|</span>\n<span class=\"w\">      </span><span class=\"o\">+----------+</span><span class=\"w\">     </span><span class=\"o\">+----------+</span><span class=\"w\">     </span><span class=\"o\">+----------+</span>\n<span class=\"w\">           </span><span class=\"o\">|</span><span class=\"w\">                                  </span><span class=\"o\">|</span>\n<span class=\"w\">           </span><span class=\"n\">v</span><span class=\"w\">                                  </span><span class=\"n\">v</span>\n<span class=\"w\">      </span><span class=\"s\">&quot;Use search&quot;</span><span class=\"w\">                   </span><span class=\"s\">&quot;Here&#39;</span><span class=\"n\">s</span><span class=\"w\"> </span><span class=\"n\">the</span><span class=\"w\"> </span><span class=\"n\">answer</span><span class=\"s\">&quot;</span>\n</code></pre></div>\n<ol>\n<li>\n<span class=\"paragraph\"><strong>Model Call</strong>: The LLM receives the current state and decides whether to:</span>\n<ul>\n<li>Call a tool (continue the loop)</li>\n<li>Return a final answer (exit the loop)</li>\n</ul>\n</li>\n<li><strong>Tool Call</strong>: If the model decides to use a tool, the tool is executed and its output is added to the conversation</li>\n<li><strong>Repeat</strong>: The loop continues until the model decides it has enough information to answer</li>\n</ol>\n<h3 id=\"why-create_agent\">Why <code>create_agent</code>?</h3>\n<span class=\"paragraph\">LangChain 1.0 introduced <code>create_agent</code> as the new standard way to build agents. It provides:</span>\n<ul>\n<li><strong>Simplified API</strong>: One function to create production-ready agents</li>\n<li><strong>Middleware Support</strong>: Hook into any point in the agent loop</li>\n<li><strong>Built on LangGraph</strong>: Uses the battle-tested LangGraph runtime under the hood</li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "nWHF",
+      "code_hash": "a41dbc712254e0c69cf819db7c4af52e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-5-building-your-first-agent-with-create_agent\">Task 5: Building Your First Agent with <code>create_agent()</code></h2>\n<span class=\"paragraph\">Let's build a simple agent that can perform calculations and tell the time.</span>\n<h3 id=\"step-1-define-tools\">Step 1: Define Tools</h3>\n<span class=\"paragraph\">Tools are functions that the agent can call. We use the <code>@tool</code> decorator to create them.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ZHCJ",
+      "code_hash": "916314e4145df7662b0ba016ad92a935",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"step-2-create-the-agent\">Step 2: Create the Agent</h3>\n<span class=\"paragraph\">Now we use <code>create_agent</code> to build our agent. The function takes:</span>\n<ul>\n<li><code>model</code>: The LLM to use (can be a string like <code>\"gpt-5\"</code> or a model instance)</li>\n<li><code>tools</code>: List of tools the agent can use</li>\n<li><code>prompt</code>: Optional system prompt to customize behavior</li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "qnkX",
+      "code_hash": "cf08cf577a88c3f90e3283b20a80ecb6",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"step-3-run-the-agent\">Step 3: Run the Agent</h3>\n<span class=\"paragraph\">The agent is a Runnable, so we can invoke it like any other LangChain component.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ulZA",
+      "code_hash": "25ef52ab1a7e0b91f9def2bda1f946f3",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"streaming-agent-responses\">Streaming Agent Responses</h3>\n<span class=\"paragraph\">For better UX, we can stream the agent's responses as they're generated.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Pvdt",
+      "code_hash": "24c5d6a47b994011608b2ae93b052a6c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h2 id=\"question-1\">\u2753 Question #1:</h2>\n<span class=\"paragraph\">In the agent loop, what determines whether the agent continues to call tools or returns a final answer to the user? How does <code>create_agent</code> handle this decision internally?</span>\n<h5 id=\"answer\">\u2705 Answer:</h5>\n<span class=\"paragraph\">The LLM decides - shockingly, that's literally the whole point of an agent. When the model outputs tool calls (structured JSON saying \"use this tool\"), the loop continues. When it outputs plain text (no tool calls), we're done. <code>create_agent</code> (built on LangGraph) simply checks the model response: if <code>tool_calls</code> is non-empty, execute tools and loop; otherwise, return the content. It's not magic, it's just conditional logic. The agent keeps going until the LLM gets bored enough to actually answer the question.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ZBYS",
+      "code_hash": "6663a2d8c476f34ccc1d945bf0a923bc",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">mo.md(r\"\\\"\\\"</span>\n<h2 id=\"question-2\">\u2753 Question #2:</h2>\n<span class=\"paragraph\">Looking at the <code>calculate</code> and <code>get_current_time</code> tools we created, why is the <strong>docstring</strong> so important for each tool? How does the agent use this information when deciding which tool to call?</span>\n<h5 id=\"answer\">\u2705 Answer:</h5>\n<span class=\"paragraph\">The docstring is literally the only thing the LLM sees about your tool. When you pass tools to <code>create_agent</code>, LangChain wraps them up into a fancy schema and feeds the docstring straight to the model as the \"description.\" The model reads these descriptions like a menu and picks what to order. That's why <code>calculate's</code> docstring says \"use this for math calculations\" - so the LLM actually knows it's for math, not, say, quantum physics. Bad docstring? Bad tool decisions. It's not telepathy, it's text matching.\n\"\\\"\\\")</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "aLJB",
+      "code_hash": "d1f1b87da9ba778668d30f64dfb65cd4",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h2 id=\"activity-1-create-a-custom-tool\">\ud83c\udfd7\ufe0f Activity #1: Create a Custom Tool</h2>\n<span class=\"paragraph\">Create your own custom tool and add it to the agent!</span>\n<span class=\"paragraph\">Ideas:</span>\n<ul>\n<li>A tool that converts temperatures between Celsius and Fahrenheit</li>\n<li>A tool that generates a random number within a range</li>\n<li>A tool that counts words in a given text</li>\n</ul>\n<span class=\"paragraph\">Requirements:</span>\n<ol>\n<li>Use the <code>@tool</code> decorator</li>\n<li>Include a clear docstring (this is what the agent sees!)</li>\n<li>Add it to the agent and test it</li>\n</ol></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "AjVT",
+      "code_hash": "d320d8ffbae1c8cb0965e3028fe2166c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h1 id=\"breakout-room-2\">\ud83e\udd1d Breakout Room #2</h1>\n<h2 id=\"middleware-agentic-rag-with-qdrant\">Middleware - Agentic RAG with Qdrant</h2></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "pHFh",
+      "code_hash": "8e8174798a720a747ea083d460035fa7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Now that we understand the basics of agents, let's build something more powerful: an <strong>Agentic RAG</strong> system.</span>\n<span class=\"paragraph\">Traditional RAG follows a fixed pattern: retrieve \u2192 generate. But <strong>Agentic RAG</strong> gives the agent control over when and how to retrieve information, making it more flexible and intelligent.</span>\n<span class=\"paragraph\">We'll also introduce <strong>middleware</strong> - hooks that let us customize the agent's behavior at every step.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "NCOB",
+      "code_hash": "4dcb69eace2245bd87a84b4e55271ce5",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-6-loading-chunking-documents\">Task 6: Loading &amp; Chunking Documents</h2>\n<span class=\"paragraph\">We'll use the same Health &amp; Wellness Guide from Session 2 to maintain continuity.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TXez",
+      "code_hash": "ae41c37c0fc28370f5db4eee1b40b014",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-7-setting-up-qdrant-vector-database\">Task 7: Setting up Qdrant Vector Database</h2>\n<span class=\"paragraph\">Qdrant is a production-ready vector database. We'll use an in-memory instance for development, but the same code works with a hosted Qdrant instance.</span>\n<span class=\"paragraph\">Key concepts:</span>\n<ul>\n<li><strong>Collection</strong>: A namespace for storing vectors (like a table in SQL)</li>\n<li><strong>Points</strong>: Individual vectors with optional payloads (metadata)</li>\n<li><strong>Distance</strong>: How similarity is measured (we'll use cosine similarity)</li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "wAgl",
+      "code_hash": "5f931c16dd07f15a23394a042fdf4df7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-8-creating-a-rag-tool\">Task 8: Creating a RAG Tool</h2>\n<span class=\"paragraph\">Now we'll wrap our retriever as a tool that the agent can use. This is the key to <strong>Agentic RAG</strong> - the agent decides when to retrieve information.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "dGlV",
+      "code_hash": "d687f774fabafd1c7565c335883ab0a7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-9-introduction-to-middleware\">Task 9: Introduction to Middleware</h2>\n<span class=\"paragraph\"><strong>Middleware</strong> in LangChain 1.0 allows you to hook into the agent loop at various points:</span>\n<div class=\"language-brainfuck codehilite\"><pre><span></span><code><span class=\"c\">                       MIDDLEWARE HOOKS</span>\n\n<span class=\"c\">   </span><span class=\"nb\">+--------------+</span><span class=\"c\">                    </span><span class=\"nb\">+--------------+</span>\n<span class=\"c\">   | before_model | </span><span class=\"nb\">--</span><span class=\"nv\">&gt;</span><span class=\"c\"> MODEL CALL </span><span class=\"nb\">--</span><span class=\"nv\">&gt;</span><span class=\"c\"> | after_model  |</span>\n<span class=\"c\">   </span><span class=\"nb\">+--------------+</span><span class=\"c\">                    </span><span class=\"nb\">+--------------+</span>\n\n<span class=\"c\">   </span><span class=\"nb\">+-------------------+</span>\n<span class=\"c\">   | wrap_model_call   |  (intercept and modify calls)</span>\n<span class=\"c\">   </span><span class=\"nb\">+-------------------+</span>\n</code></pre></div>\n<span class=\"paragraph\">Common use cases:</span>\n<ul>\n<li><strong>Logging</strong>: Track what the agent is doing</li>\n<li><strong>Guardrails</strong>: Filter or modify inputs/outputs</li>\n<li><strong>Rate limiting</strong>: Control API usage</li>\n<li><strong>Human-in-the-loop</strong>: Pause for human approval</li>\n</ul>\n<span class=\"paragraph\">LangChain provides middleware through <strong>decorator functions</strong> that hook into specific points in the agent loop.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "yOPj",
+      "code_hash": "5fe78c6c2a9f483c70ad301e7a197e45",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-10-building-agentic-rag-with-middleware\">Task 10: Building Agentic RAG with Middleware</h2>\n<span class=\"paragraph\">Now let's put it all together: an agentic RAG system with middleware support!</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "mWxS",
+      "code_hash": "1be1cbacab035fa641ccb6d062dc18b8",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"visualizing-the-agent\">Visualizing the Agent</h3>\n<span class=\"paragraph\">The agent created by <code>create_agent</code> is built on LangGraph, so we can visualize its structure.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "YWSi",
+      "code_hash": "4c5e93e81210850bfb043411ab1f73ca",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"momdr\">mo.md(r\"\\\"\\\"</h2>\n<h2 id=\"question-3\">\u2753 Question #3:</h2>\n<span class=\"paragraph\">How does <strong>Agentic RAG</strong> differ from traditional RAG? What are the advantages and potential disadvantages of letting the agent decide when to retrieve information?</span>\n<h5 id=\"answer\">\u2705 Answer:</h5>\n<span class=\"paragraph\">Traditional RAG is like a vending machine - you put in a query, it spits out retrieved docs every single time, no thinking required. Agentic RAG gives the LLM the steering wheel - it decides whether to retrieve, retrieve multiple times, or skip it entirely and just answer from its own training data.</span>\n<span class=\"paragraph\">Pros: You don't waste tokens retrieving for \"What is 2+2?\" or \"Tell me a joke.\" The agent can reason through multi-step questions, retrieving only when actually needed. It's smarter, more flexible, and your wallet will thank you for those saved API calls.</span>\n<span class=\"paragraph\">Cons: It's slower (extra model calls = more latency), more expensive (decision-making isn't free), and the agent might confidently decide not to retrieve when it absolutely should. Plus, debugging \"why didn't it fetch anything?\" is way more fun than you'd think.\n\"\\\"\\\")</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "zlud",
+      "code_hash": "63a87a29c9a8316f5ba014ac7041ba37",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"question-4\">\u2753 Question #4:</h2>\n<span class=\"paragraph\">Looking at the middleware examples (<code>log_before_model</code>, <code>log_after_model</code>, and <code>ModelCallLimitMiddleware</code>), describe a real-world scenario where middleware would be essential for a production agent. What specific middleware hooks would you use and why?</span>\n<h5 id=\"answer\">\u2705 Answer:</h5>\n<span class=\"paragraph\">Imagine a banking chatbot deployed at scale - you can't just \"hope it doesn't leak customer data.\" Middleware is the only thing standing between me and getting so so so fired. I'd use <code>before_model</code> to scrub PII from inputs (compliance isn't optional), <code>after_model</code> to verify no sensitive info slips through in outputs, and <code>ModelCallLimitMiddleware</code> to keep API costs from spiraling when a user asks \"explain everything\" in 30 different ways. Without middleware, you're essentially trusting a hallucinations-prone AI with legal liability.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "tZnO",
+      "code_hash": "0d2258e9d131ac42e1fc476f20397021",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h2 id=\"activity-2-enhance-the-agentic-rag-system\">\ud83c\udfd7\ufe0f Activity #2: Enhance the Agentic RAG System</h2>\n<span class=\"paragraph\">Now it's your turn! Enhance the wellness agent by implementing ONE of the following:</span>\n<h3 id=\"option-a-add-a-new-tool\">Option A: Add a New Tool</h3>\n<span class=\"paragraph\">Create a new tool that the agent can use. Ideas:</span>\n<ul>\n<li>A tool that calculates BMI given height and weight</li>\n<li>A tool that estimates daily calorie needs</li>\n<li>A tool that creates a simple workout plan</li>\n</ul>\n<h3 id=\"option-b-create-custom-middleware\">Option B: Create Custom Middleware</h3>\n<span class=\"paragraph\">Build middleware that adds new functionality:</span>\n<ul>\n<li>Middleware that tracks which tools are used most frequently</li>\n<li>Middleware that adds a friendly greeting to responses</li>\n<li>Middleware that enforces a response length limit</li>\n</ul>\n<h3 id=\"option-c-improve-the-rag-tool\">Option C: Improve the RAG Tool</h3>\n<span class=\"paragraph\">Enhance the retrieval tool:</span>\n<ul>\n<li>Add metadata filtering</li>\n<li>Implement reranking of results</li>\n<li>Add source citations with relevance scores</li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "ab17e6c06ebf71de241b01feb0cf887c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "69cb13e1d1d9c233e6fa08caf924deb9",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "1da13b17a6053d7781428960bd2445fd",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/imjonezz/.local/share/uv/python/cpython-3.12.12-linux-x86_64-gnu/lib/python3.12/getpass.py:62: GetPassWarning: Can not control echo on the terminal.\n  passwd = fallback_getpass(prompt, stream)\nWarning: Password input may be echoed.\nOpenAI API Key: ",
+          "mimetype": "text/plain"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": " asdf\n",
+          "mimetype": "text/plain"
+        },
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "SFPL",
+      "code_hash": "a126251514fe685e69f4604e95370f3c",
+      "outputs": [],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "/home/imjonezz/.local/share/uv/python/cpython-3.12.12-linux-x86_64-gnu/lib/python3.12/getpass.py:62: GetPassWarning: Can not control echo on the terminal.\n  passwd = fallback_getpass(prompt, stream)\nWarning: Password input may be echoed.\nLangFuse Public Key (or press Enter to skip): ",
+          "mimetype": "text/plain"
+        },
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "BYtC",
+      "code_hash": "3f22db793e2cfcc10ad0358491d63c37",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "LangFuse handler disabled - skipping initialization\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "Kclp",
+      "code_hash": "fb04898d2ae6ae61eb42432dc7d651bf",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+          "traceback": []
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "<span class=\"codehilite\"><div class=\"highlight\"><pre><span></span><span class=\"gt\">Traceback (most recent call last):</span>\n  File <span class=\"nb\">&quot;/tmp/marimo_845231/__marimo__cell_Kclp_.py&quot;</span>, line <span class=\"m\">14</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"n\">model</span> <span class=\"o\">=</span> <span class=\"n\">ChatOpenAI</span><span class=\"p\">(</span>\n<span class=\"w\">            </span><span class=\"pm\">^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/langchain_core/load/serializable.py&quot;</span>, line <span class=\"m\">117</span>, in <span class=\"n\">__init__</span>\n<span class=\"w\">    </span><span class=\"nb\">super</span><span class=\"p\">()</span><span class=\"o\">.</span><span class=\"fm\">__init__</span><span class=\"p\">(</span><span class=\"o\">*</span><span class=\"n\">args</span><span class=\"p\">,</span> <span class=\"o\">**</span><span class=\"n\">kwargs</span><span class=\"p\">)</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/pydantic/main.py&quot;</span>, line <span class=\"m\">250</span>, in <span class=\"n\">__init__</span>\n<span class=\"w\">    </span><span class=\"n\">validated_self</span> <span class=\"o\">=</span> <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">__pydantic_validator__</span><span class=\"o\">.</span><span class=\"n\">validate_python</span><span class=\"p\">(</span><span class=\"n\">data</span><span class=\"p\">,</span> <span class=\"n\">self_instance</span><span class=\"o\">=</span><span class=\"bp\">self</span><span class=\"p\">)</span>\n<span class=\"w\">                     </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/langchain_openai/chat_models/base.py&quot;</span>, line <span class=\"m\">996</span>, in <span class=\"n\">validate_environment</span>\n<span class=\"w\">    </span><span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">root_async_client</span> <span class=\"o\">=</span> <span class=\"n\">openai</span><span class=\"o\">.</span><span class=\"n\">AsyncOpenAI</span><span class=\"p\">(</span>\n<span class=\"w\">                             </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/openai/_client.py&quot;</span>, line <span class=\"m\">488</span>, in <span class=\"n\">__init__</span>\n<span class=\"w\">    </span><span class=\"k\">raise</span> <span class=\"n\">OpenAIError</span><span class=\"p\">(</span>\n<span class=\"gr\">openai.OpenAIError</span>: <span class=\"n\">The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable</span>\n</pre></div>\n</span>",
+          "mimetype": "application/vnd.marimo+traceback"
+        }
+      ]
+    },
+    {
+      "id": "emfo",
+      "code_hash": "74130f010f2445dd8cd85ec041de83fe",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (OpenAIError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "iLit",
+      "code_hash": "de940f35b5dd117827310ed65e998205",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Tools created:\n  - calculate: Evaluate a mathematical expression. Use this for any math ca...\n  - get_current_time: Get the current date and time. Use this when the user asks a...\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "ROlb",
+      "code_hash": "08a0e7d36490716e9a453ddd22d19c43",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (OpenAIError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TqIu",
+      "code_hash": "4879eb43e8a4534c296cfaf4452f5a36",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "Vxnm",
+      "code_hash": "22ef961cc0af7c59d35e134f47383af8",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "DnEU",
+      "code_hash": "59a6473b2d8419a611446c234f8c4f7f",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "ecfG",
+      "code_hash": "f8346a6243eeaa59c0640954d4fbf645",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "nHfw",
+      "code_hash": "1300fd6d5bee334d74097dd85832c288",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "xXTn",
+      "code_hash": "272079d254dce84fa5f21230c0d58c8f",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (OpenAIError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "aqbW",
+      "code_hash": "1fd578e8db5b26dab51ae74c57663091",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Loaded 1 document(s)\nTotal characters: 16,206\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "TRpd",
+      "code_hash": "df2cf321fe37945bb5383f4454467c2f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Split into 41 chunks\n\nSample chunk:\n--------------------------------------------------\nThe Personal Wellness Guide\nA Comprehensive Resource for Health and Well-being\n\nPART 1: EXERCISE AND MOVEMENT\n\nChapter 1: Understanding Exercise Basics\n\nExercise is one of the most important things you can do for your health. Regular physical activity can improve your brain health, help manage weigh...\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "dNNg",
+      "code_hash": "6754d08ff8b49d18204dc3d1aae664ee",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
+          "traceback": []
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "<span class=\"codehilite\"><div class=\"highlight\"><pre><span></span><span class=\"gt\">Traceback (most recent call last):</span>\n  File <span class=\"nb\">&quot;/tmp/marimo_845231/__marimo__cell_dNNg_.py&quot;</span>, line <span class=\"m\">27</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"n\">embedding_model</span> <span class=\"o\">=</span> <span class=\"n\">LMStudioEmbeddings</span><span class=\"p\">(</span>\n<span class=\"w\">                      </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/tmp/marimo_845231/__marimo__cell_dNNg_.py&quot;</span>, line <span class=\"m\">11</span>, in <span class=\"n\">__init__</span>\n<span class=\"w\">    </span><span class=\"nb\">super</span><span class=\"p\">()</span><span class=\"o\">.</span><span class=\"fm\">__init__</span><span class=\"p\">(</span><span class=\"o\">**</span><span class=\"n\">kwargs</span><span class=\"p\">)</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/pydantic/main.py&quot;</span>, line <span class=\"m\">250</span>, in <span class=\"n\">__init__</span>\n<span class=\"w\">    </span><span class=\"n\">validated_self</span> <span class=\"o\">=</span> <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">__pydantic_validator__</span><span class=\"o\">.</span><span class=\"n\">validate_python</span><span class=\"p\">(</span><span class=\"n\">data</span><span class=\"p\">,</span> <span class=\"n\">self_instance</span><span class=\"o\">=</span><span class=\"bp\">self</span><span class=\"p\">)</span>\n<span class=\"w\">                     </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/langchain_openai/embeddings/base.py&quot;</span>, line <span class=\"m\">406</span>, in <span class=\"n\">validate_environment</span>\n<span class=\"w\">    </span><span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">async_client</span> <span class=\"o\">=</span> <span class=\"n\">openai</span><span class=\"o\">.</span><span class=\"n\">AsyncOpenAI</span><span class=\"p\">(</span>\n<span class=\"w\">                        </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/openai/_client.py&quot;</span>, line <span class=\"m\">488</span>, in <span class=\"n\">__init__</span>\n<span class=\"w\">    </span><span class=\"k\">raise</span> <span class=\"n\">OpenAIError</span><span class=\"p\">(</span>\n<span class=\"gr\">openai.OpenAIError</span>: <span class=\"n\">The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable</span>\n</pre></div>\n</span>",
+          "mimetype": "application/vnd.marimo+traceback"
+        }
+      ]
+    },
+    {
+      "id": "yCnT",
+      "code_hash": "bdb1f97d6d7335f4c9b8db012687590d",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (OpenAIError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "wlCL",
+      "code_hash": "4ec6cae4856fa802989d8a9cb93cc981",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (OpenAIError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "kqZH",
+      "code_hash": "efbad3abbc945ca9869ae38e72236b4d",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (OpenAIError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "rEll",
+      "code_hash": "397feb91e32468575ca84f48c3e44a1b",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "An ancestor raised an exception (OpenAIError): ",
+          "traceback": []
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "SdmI",
+      "code_hash": "950d1578f8534606b16f8aecd7ba7aab",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Logging middleware created!\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "lgWD",
+      "code_hash": "94a2d98995a089f231363b2666292e0f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Call limit middleware created!\n  - Thread limit: 10\n  - Run limit: 5\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "fwwy",
+      "code_hash": "2e42cec62f595929d78e9ec2d9fda40c",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "LJZf",
+      "code_hash": "eac36185612f7529edc0dff144977651",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "urSm",
+      "code_hash": "7893c6492eaef192bfff355a2b1bc20d",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "jxvo",
+      "code_hash": "d2683afcd0f4d92b31b52749a7123255",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "CcZR",
+      "code_hash": "d24c90583453738a471add220734a3cb",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "xvXZ",
+      "code_hash": "a21a68673dcb4a0481433267b9f31964",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "CLip",
+      "code_hash": "c35c48be5c91a0506a6c225914c4e608",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "YECM",
+      "code_hash": "1d0db38904205bec4d6f6f6a1f6cec3e",
+      "outputs": [],
+      "console": []
+    }
+  ]
+}

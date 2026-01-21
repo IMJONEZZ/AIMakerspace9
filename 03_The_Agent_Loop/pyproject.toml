@@ -1,0 +1,20 @@
+[project]
+name = "03-the-agent-loop"
+version = "0.1.0"
+description = "The Agent Loop - Building Agents with LangChain 1.0"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ipykernel>=6.29.5",
+    "jupyter>=1.1.1",
+    "langchain>=1.0.0",
+    "langchain-openai>=0.3.0",
+    "langsmith>=0.2.0",
+    "langgraph>=0.3.0",
+    "qdrant-client>=1.12.0",
+    "langchain-qdrant>=0.2.0",
+    "openai>=1.59.7",
+    "python-dotenv>=1.0.1",
+    "tiktoken>=0.8.0",
+    "nest-asyncio>=1.6.0",
+]

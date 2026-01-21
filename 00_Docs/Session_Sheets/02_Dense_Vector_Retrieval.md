@@ -1,3 +1,28 @@
+# Session 2: 🗃️ Dense Vector Retrieval
+
+🎯 **Goal**: Understand RAG from first principles, in concepts and in code
+
+📚 **Learning Outcomes**
+- Introduction to Context Engineering, RAG, and the LLM application stack
+- Overview of embeddings and similarity search
+- Learn to add context using a vector database
+- Build a RAG (dense vector retrieval) application from scratch in Python
+
+🧰 **New Tools**
+- Embedding Model: [OpenAI embeddings ](https://platform.openai.com/docs/guides/embeddings/what-are-embeddings#:~:text=*%2D-,ada,-%2D*%2D001)
+- Orchestration: [OpenAI Python SDK](https://github.com/openai/openai-python)
+- Vector Database: Custom
+
+## 📛 Required Tooling & Account Setup
+The same setup we saw in Session 1 is required here. You will need your dev environment ready to go and your OpenAI key. Everything else is Python!
+
+## 📜 Recommended Reading
+
+1. We _again_ recommend checking out the [Language Models are Few-Shot Learners (2020)](https://arxiv.org/abs/2005.14165) paper. As we'll discuss below, it literally invented In-Context Learning.
+2. The [LLM Application Stack](https://a16z.com/emerging-architectures-for-llm-applications/) (based on the design pattern of In-Context Learning) by a16z (June 2023).
+3. The OG RAG Paper is called [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks (2020)](https://arxiv.org/abs/2005.11401). It's kind of the week of class for this one.
+4. The original Context Engineering resource, [12-Factor Agents](https://github.com/humanlayer/12-factor-agents/tree/main) by Dex Horthy (June 2025).
+
 # 🗺️ Overview
 
 In Session 2, we dig deeper into prototyping LLM applications with Retrieval Augmented Generation, or RAG. From Session 1, we understand that we can write simple prompts and provide them to an LLM API. We can evaluate the output responses on behalf of our users with vibe checks. From The AIE Challenge, we know that we can wrap the functionality we iterate towards through prompting and vibe checking with a frontend and a deployed backend so that other people can use our app. Now, we'll see what happens when we  start adding the most appropriate context we can find. We should ask "what does the LLM need to know - that it doesn't already know - to give great outputs to users?" By augmenting our prompts with reference materials retrieved before generation, we do **RAG**.
@@ -5,15 +30,6 @@ In Session 2, we dig deeper into prototyping LLM applications with Retrieval Aug
 The core **concepts** we’ll cover include the big ideas behind RAG. We break down RAG into two constituent components (processes): **in-context learning** and **embedding-based dense vector retrieval**.  
 
 The **code** we’ll focus on during this session follows the concepts directly. We will develop a RAG application from scratch in pure Python. Starting first with a primer on understanding embeddings, we will proceed to build a custom **vector store**, implement a **similarity search engine**, and put it all together, Pythonically 🐍. You will be asked, as in Session 1, to enhance your Personal Wellness Assistant. As we will see, there are many ways to do this, even with a simple RAG application.
-
-## 📛 Required **Tooling & Account Setup**
-
-The same setup we saw in Session 1 is required here. You will need your dev environment ready to go and your OpenAI key. Everything else is Python!
-
-## **🧑‍💻 Recommended Pre-Work**
-
-1. We _again_ recommend checking out the [Language Models are Few-Shot Learners (2020)](https://arxiv.org/abs/2005.14165) paper. As we'll discuss below, it literally invented In-Context Learning.
-2. The OG RAG Paper is called [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks (2020)](https://arxiv.org/abs/2005.11401). It's kind of the week of class for this one.
 
 # 💬 From Prompt Engineering to RAG
 
