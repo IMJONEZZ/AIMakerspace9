@@ -45,19 +45,19 @@
     },
     {
       "id": "PKri",
-      "code_hash": "e076ebcb69228ba5df2b43ca2e8994ac",
+      "code_hash": "7b103aabd1a3571fa0a96cfc1a2ab489",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-2-environment-variables\">Task 2: Environment Variables</h2>\n<span class=\"paragraph\">We need to set up our API keys for:</span>\n<ol>\n<li><strong>OpenAI</strong> - For the GPT-5 model</li>\n<li><strong>LangFuse</strong> - For tracing and observability (self-hosted, open source)</li>\n</ol></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-2-environment-variables\">Task 2: Environment Variables</h2>\n<span class=\"paragraph\">We need to set up our API keys for:</span>\n<ol>\n<li><strong>OpenAI</strong> - For the GPT-5 model</li>\n<li><strong>LangSmith</strong> - For tracing and observability (optional but recommended)</li>\n</ol></span>"
           }
         }
       ],
       "console": []
     },
     {
-      "id": "RGSE",
+      "id": "BYtC",
       "code_hash": "c149fe0ef7e51b6d0d9c4182abf0e5e9",
       "outputs": [
         {
@@ -70,7 +70,7 @@
       "console": []
     },
     {
-      "id": "Hstk",
+      "id": "emfo",
       "code_hash": "bf95a8073b026eb8022f13ae15b85f36",
       "outputs": [
         {
@@ -83,7 +83,7 @@
       "console": []
     },
     {
-      "id": "nWHF",
+      "id": "Hstk",
       "code_hash": "a41dbc712254e0c69cf819db7c4af52e",
       "outputs": [
         {
@@ -96,7 +96,7 @@
       "console": []
     },
     {
-      "id": "ZHCJ",
+      "id": "iLit",
       "code_hash": "916314e4145df7662b0ba016ad92a935",
       "outputs": [
         {
@@ -109,7 +109,7 @@
       "console": []
     },
     {
-      "id": "qnkX",
+      "id": "ROlb",
       "code_hash": "cf08cf577a88c3f90e3283b20a80ecb6",
       "outputs": [
         {
@@ -122,7 +122,7 @@
       "console": []
     },
     {
-      "id": "ulZA",
+      "id": "DnEU",
       "code_hash": "25ef52ab1a7e0b91f9def2bda1f946f3",
       "outputs": [
         {
@@ -135,13 +135,26 @@
       "console": []
     },
     {
-      "id": "Pvdt",
-      "code_hash": "24c5d6a47b994011608b2ae93b052a6c",
+      "id": "ecfG",
+      "code_hash": "19ef0986170f92ec75041a46c26776f5",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h2 id=\"question-1\">\u2753 Question #1:</h2>\n<span class=\"paragraph\">In the agent loop, what determines whether the agent continues to call tools or returns a final answer to the user? How does <code>create_agent</code> handle this decision internally?</span>\n<h5 id=\"answer\">\u2705 Answer:</h5>\n<span class=\"paragraph\">The LLM decides - shockingly, that's literally the whole point of an agent. When the model outputs tool calls (structured JSON saying \"use this tool\"), the loop continues. When it outputs plain text (no tool calls), we're done. <code>create_agent</code> (built on LangGraph) simply checks the model response: if <code>tool_calls</code> is non-empty, execute tools and loop; otherwise, return the content. It's not magic, it's just conditional logic. The agent keeps going until the LLM gets bored enough to actually answer the question.</span></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h2 id=\"question-1\">\u2753 Question #1:</h2>\n<span class=\"paragraph\">In the agent loop, what determines whether the agent continues to call tools or returns a final answer to the user? How does <code>create_agent</code> handle this decision internally?</span>\n<h5 id=\"answer\">\u2705 Answer:</h5>\n<span class=\"paragraph\"><em>Your answer here</em></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Pvdt",
+      "code_hash": "1a4c6f5becae9e22476aafe5a0c37e85",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"question-2\">\u2753 Question #2:</h2>\n<span class=\"paragraph\">Looking at the <code>calculate</code> and <code>get_current_time</code> tools we created, why is the <strong>docstring</strong> so important for each tool? How does the agent use this information when deciding which tool to call?</span>\n<h5 id=\"answer\">\u2705 Answer:</h5>\n<span class=\"paragraph\"><em>Your answer here</em></span></span>"
           }
         }
       ],
@@ -149,19 +162,6 @@
     },
     {
       "id": "ZBYS",
-      "code_hash": "6663a2d8c476f34ccc1d945bf0a923bc",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">mo.md(r\"\\\"\\\"</span>\n<h2 id=\"question-2\">\u2753 Question #2:</h2>\n<span class=\"paragraph\">Looking at the <code>calculate</code> and <code>get_current_time</code> tools we created, why is the <strong>docstring</strong> so important for each tool? How does the agent use this information when deciding which tool to call?</span>\n<h5 id=\"answer\">\u2705 Answer:</h5>\n<span class=\"paragraph\">The docstring is literally the only thing the LLM sees about your tool. When you pass tools to <code>create_agent</code>, LangChain wraps them up into a fancy schema and feeds the docstring straight to the model as the \"description.\" The model reads these descriptions like a menu and picks what to order. That's why <code>calculate's</code> docstring says \"use this for math calculations\" - so the LLM actually knows it's for math, not, say, quantum physics. Bad docstring? Bad tool decisions. It's not telepathy, it's text matching.\n\"\\\"\\\")</span></span>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "aLJB",
       "code_hash": "d1f1b87da9ba778668d30f64dfb65cd4",
       "outputs": [
         {
@@ -174,7 +174,7 @@
       "console": []
     },
     {
-      "id": "AjVT",
+      "id": "xXTn",
       "code_hash": "d320d8ffbae1c8cb0965e3028fe2166c",
       "outputs": [
         {
@@ -187,7 +187,7 @@
       "console": []
     },
     {
-      "id": "pHFh",
+      "id": "AjVT",
       "code_hash": "8e8174798a720a747ea083d460035fa7",
       "outputs": [
         {
@@ -200,7 +200,7 @@
       "console": []
     },
     {
-      "id": "NCOB",
+      "id": "pHFh",
       "code_hash": "4dcb69eace2245bd87a84b4e55271ce5",
       "outputs": [
         {
@@ -213,7 +213,7 @@
       "console": []
     },
     {
-      "id": "TXez",
+      "id": "TRpd",
       "code_hash": "ae41c37c0fc28370f5db4eee1b40b014",
       "outputs": [
         {
@@ -226,7 +226,7 @@
       "console": []
     },
     {
-      "id": "wAgl",
+      "id": "kqZH",
       "code_hash": "5f931c16dd07f15a23394a042fdf4df7",
       "outputs": [
         {
@@ -239,7 +239,7 @@
       "console": []
     },
     {
-      "id": "dGlV",
+      "id": "rEll",
       "code_hash": "d687f774fabafd1c7565c335883ab0a7",
       "outputs": [
         {
@@ -252,7 +252,7 @@
       "console": []
     },
     {
-      "id": "yOPj",
+      "id": "lgWD",
       "code_hash": "5fe78c6c2a9f483c70ad301e7a197e45",
       "outputs": [
         {
@@ -265,7 +265,7 @@
       "console": []
     },
     {
-      "id": "mWxS",
+      "id": "jxvo",
       "code_hash": "1be1cbacab035fa641ccb6d062dc18b8",
       "outputs": [
         {
@@ -278,13 +278,26 @@
       "console": []
     },
     {
-      "id": "YWSi",
-      "code_hash": "4c5e93e81210850bfb043411ab1f73ca",
+      "id": "CcZR",
+      "code_hash": "3d5fbe921f16ae26ea1518810f60ac04",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"momdr\">mo.md(r\"\\\"\\\"</h2>\n<h2 id=\"question-3\">\u2753 Question #3:</h2>\n<span class=\"paragraph\">How does <strong>Agentic RAG</strong> differ from traditional RAG? What are the advantages and potential disadvantages of letting the agent decide when to retrieve information?</span>\n<h5 id=\"answer\">\u2705 Answer:</h5>\n<span class=\"paragraph\">Traditional RAG is like a vending machine - you put in a query, it spits out retrieved docs every single time, no thinking required. Agentic RAG gives the LLM the steering wheel - it decides whether to retrieve, retrieve multiple times, or skip it entirely and just answer from its own training data.</span>\n<span class=\"paragraph\">Pros: You don't waste tokens retrieving for \"What is 2+2?\" or \"Tell me a joke.\" The agent can reason through multi-step questions, retrieving only when actually needed. It's smarter, more flexible, and your wallet will thank you for those saved API calls.</span>\n<span class=\"paragraph\">Cons: It's slower (extra model calls = more latency), more expensive (decision-making isn't free), and the agent might confidently decide not to retrieve when it absolutely should. Plus, debugging \"why didn't it fetch anything?\" is way more fun than you'd think.\n\"\\\"\\\")</span></span>"
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h2 id=\"question-3\">\u2753 Question #3:</h2>\n<span class=\"paragraph\">How does <strong>Agentic RAG</strong> differ from traditional RAG? What are the advantages and potential disadvantages of letting the agent decide when to retrieve information?</span>\n<h5 id=\"answer\">\u2705 Answer:</h5>\n<span class=\"paragraph\"><em>Your answer here</em></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "YWSi",
+      "code_hash": "63245b3faf740046ead035e2475ef867",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"question-4\">\u2753 Question #4:</h2>\n<span class=\"paragraph\">Looking at the middleware examples (<code>log_before_model</code>, <code>log_after_model</code>, and <code>ModelCallLimitMiddleware</code>), describe a real-world scenario where middleware would be essential for a production agent. What specific middleware hooks would you use and why?</span>\n<h5 id=\"answer\">\u2705 Answer:</h5>\n<span class=\"paragraph\"><em>Your answer here</em></span></span>"
           }
         }
       ],
@@ -292,19 +305,6 @@
     },
     {
       "id": "zlud",
-      "code_hash": "63a87a29c9a8316f5ba014ac7041ba37",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"question-4\">\u2753 Question #4:</h2>\n<span class=\"paragraph\">Looking at the middleware examples (<code>log_before_model</code>, <code>log_after_model</code>, and <code>ModelCallLimitMiddleware</code>), describe a real-world scenario where middleware would be essential for a production agent. What specific middleware hooks would you use and why?</span>\n<h5 id=\"answer\">\u2705 Answer:</h5>\n<span class=\"paragraph\">Imagine a banking chatbot deployed at scale - you can't just \"hope it doesn't leak customer data.\" Middleware is the only thing standing between me and getting so so so fired. I'd use <code>before_model</code> to scrub PII from inputs (compliance isn't optional), <code>after_model</code> to verify no sensitive info slips through in outputs, and <code>ModelCallLimitMiddleware</code> to keep API costs from spiraling when a user asks \"explain everything\" in 30 different ways. Without middleware, you're essentially trusting a hallucinations-prone AI with legal liability.</span></span>"
-          }
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "tZnO",
       "code_hash": "0d2258e9d131ac42e1fc476f20397021",
       "outputs": [
         {
@@ -318,413 +318,186 @@
     },
     {
       "id": "bkHC",
-      "code_hash": "ab17e6c06ebf71de241b01feb0cf887c",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/plain": ""
-          }
-        }
-      ],
+      "code_hash": "c1de39be12b58aed65d724213b1babdd",
+      "outputs": [],
       "console": []
     },
     {
       "id": "lEQa",
-      "code_hash": "69cb13e1d1d9c233e6fa08caf924deb9",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/plain": ""
-          }
-        }
-      ],
+      "code_hash": "f5d5cb0314399dab2c2428435f58d9e7",
+      "outputs": [],
       "console": []
     },
     {
       "id": "Xref",
       "code_hash": "1da13b17a6053d7781428960bd2445fd",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/plain": ""
-          }
-        }
-      ],
-      "console": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "/home/imjonezz/.local/share/uv/python/cpython-3.12.12-linux-x86_64-gnu/lib/python3.12/getpass.py:62: GetPassWarning: Can not control echo on the terminal.\n  passwd = fallback_getpass(prompt, stream)\nWarning: Password input may be echoed.\nOpenAI API Key: ",
-          "mimetype": "text/plain"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": " asdf\n",
-          "mimetype": "text/plain"
-        },
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "\n",
-          "mimetype": "text/plain"
-        }
-      ]
-    },
-    {
-      "id": "SFPL",
-      "code_hash": "a126251514fe685e69f4604e95370f3c",
       "outputs": [],
-      "console": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "/home/imjonezz/.local/share/uv/python/cpython-3.12.12-linux-x86_64-gnu/lib/python3.12/getpass.py:62: GetPassWarning: Can not control echo on the terminal.\n  passwd = fallback_getpass(prompt, stream)\nWarning: Password input may be echoed.\nLangFuse Public Key (or press Enter to skip): ",
-          "mimetype": "text/plain"
-        },
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "",
-          "mimetype": "text/plain"
-        }
-      ]
-    },
-    {
-      "id": "BYtC",
-      "code_hash": "3f22db793e2cfcc10ad0358491d63c37",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/plain": ""
-          }
-        }
-      ],
-      "console": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "LangFuse handler disabled - skipping initialization\n",
-          "mimetype": "text/plain"
-        }
-      ]
-    },
-    {
-      "id": "Kclp",
-      "code_hash": "fb04898d2ae6ae61eb42432dc7d651bf",
-      "outputs": [
-        {
-          "type": "error",
-          "ename": "exception",
-          "evalue": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
-          "traceback": []
-        }
-      ],
-      "console": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "<span class=\"codehilite\"><div class=\"highlight\"><pre><span></span><span class=\"gt\">Traceback (most recent call last):</span>\n  File <span class=\"nb\">&quot;/tmp/marimo_845231/__marimo__cell_Kclp_.py&quot;</span>, line <span class=\"m\">14</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"n\">model</span> <span class=\"o\">=</span> <span class=\"n\">ChatOpenAI</span><span class=\"p\">(</span>\n<span class=\"w\">            </span><span class=\"pm\">^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/langchain_core/load/serializable.py&quot;</span>, line <span class=\"m\">117</span>, in <span class=\"n\">__init__</span>\n<span class=\"w\">    </span><span class=\"nb\">super</span><span class=\"p\">()</span><span class=\"o\">.</span><span class=\"fm\">__init__</span><span class=\"p\">(</span><span class=\"o\">*</span><span class=\"n\">args</span><span class=\"p\">,</span> <span class=\"o\">**</span><span class=\"n\">kwargs</span><span class=\"p\">)</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/pydantic/main.py&quot;</span>, line <span class=\"m\">250</span>, in <span class=\"n\">__init__</span>\n<span class=\"w\">    </span><span class=\"n\">validated_self</span> <span class=\"o\">=</span> <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">__pydantic_validator__</span><span class=\"o\">.</span><span class=\"n\">validate_python</span><span class=\"p\">(</span><span class=\"n\">data</span><span class=\"p\">,</span> <span class=\"n\">self_instance</span><span class=\"o\">=</span><span class=\"bp\">self</span><span class=\"p\">)</span>\n<span class=\"w\">                     </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/langchain_openai/chat_models/base.py&quot;</span>, line <span class=\"m\">996</span>, in <span class=\"n\">validate_environment</span>\n<span class=\"w\">    </span><span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">root_async_client</span> <span class=\"o\">=</span> <span class=\"n\">openai</span><span class=\"o\">.</span><span class=\"n\">AsyncOpenAI</span><span class=\"p\">(</span>\n<span class=\"w\">                             </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/openai/_client.py&quot;</span>, line <span class=\"m\">488</span>, in <span class=\"n\">__init__</span>\n<span class=\"w\">    </span><span class=\"k\">raise</span> <span class=\"n\">OpenAIError</span><span class=\"p\">(</span>\n<span class=\"gr\">openai.OpenAIError</span>: <span class=\"n\">The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable</span>\n</pre></div>\n</span>",
-          "mimetype": "application/vnd.marimo+traceback"
-        }
-      ]
-    },
-    {
-      "id": "emfo",
-      "code_hash": "74130f010f2445dd8cd85ec041de83fe",
-      "outputs": [
-        {
-          "type": "error",
-          "ename": "exception",
-          "evalue": "An ancestor raised an exception (OpenAIError): ",
-          "traceback": []
-        }
-      ],
       "console": []
     },
     {
-      "id": "iLit",
-      "code_hash": "de940f35b5dd117827310ed65e998205",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/plain": ""
-          }
-        }
-      ],
-      "console": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Tools created:\n  - calculate: Evaluate a mathematical expression. Use this for any math ca...\n  - get_current_time: Get the current date and time. Use this when the user asks a...\n",
-          "mimetype": "text/plain"
-        }
-      ]
+      "id": "SFPL",
+      "code_hash": "438c2e1086a9f59852f2478fad5d55aa",
+      "outputs": [],
+      "console": []
     },
     {
-      "id": "ROlb",
-      "code_hash": "08a0e7d36490716e9a453ddd22d19c43",
-      "outputs": [
-        {
-          "type": "error",
-          "ename": "exception",
-          "evalue": "An ancestor raised an exception (OpenAIError): ",
-          "traceback": []
-        }
-      ],
+      "id": "RGSE",
+      "code_hash": "b423603a6a14275e04bc20cfa4ba281c",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "Kclp",
+      "code_hash": "afe138c7e985c594cf43a6e41fa1d577",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "nWHF",
+      "code_hash": "50892249b7d2d766822308dda9ddf54c",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "ZHCJ",
+      "code_hash": "eb211269b8bcae35cced003d9c804d49",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "qnkX",
+      "code_hash": "671187e999c2c10c165b0dd746d2d9b4",
+      "outputs": [],
       "console": []
     },
     {
       "id": "TqIu",
-      "code_hash": "4879eb43e8a4534c296cfaf4452f5a36",
+      "code_hash": "00e9047e82c98e4987f46eaf3c9f33af",
       "outputs": [],
       "console": []
     },
     {
       "id": "Vxnm",
-      "code_hash": "22ef961cc0af7c59d35e134f47383af8",
+      "code_hash": "5e1d212273ed65234c6cfaf1c0d9c24b",
       "outputs": [],
       "console": []
     },
     {
-      "id": "DnEU",
-      "code_hash": "59a6473b2d8419a611446c234f8c4f7f",
+      "id": "ulZA",
+      "code_hash": "6d075c734ba9975b384bdf663af0229c",
       "outputs": [],
       "console": []
     },
     {
-      "id": "ecfG",
-      "code_hash": "f8346a6243eeaa59c0640954d4fbf645",
+      "id": "aLJB",
+      "code_hash": "a469375f26fc4043a6f7a8a53867c7b6",
       "outputs": [],
       "console": []
     },
     {
       "id": "nHfw",
-      "code_hash": "1300fd6d5bee334d74097dd85832c288",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/plain": ""
-          }
-        }
-      ],
+      "code_hash": "331876e743f6b11d86d785a7294965ca",
+      "outputs": [],
       "console": []
     },
     {
-      "id": "xXTn",
-      "code_hash": "272079d254dce84fa5f21230c0d58c8f",
-      "outputs": [
-        {
-          "type": "error",
-          "ename": "exception",
-          "evalue": "An ancestor raised an exception (OpenAIError): ",
-          "traceback": []
-        }
-      ],
+      "id": "NCOB",
+      "code_hash": "1fd578e8db5b26dab51ae74c57663091",
+      "outputs": [],
       "console": []
     },
     {
       "id": "aqbW",
-      "code_hash": "1fd578e8db5b26dab51ae74c57663091",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/plain": ""
-          }
-        }
-      ],
-      "console": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Loaded 1 document(s)\nTotal characters: 16,206\n",
-          "mimetype": "text/plain"
-        }
-      ]
+      "code_hash": "0556375ba2c69de91eaa46c316c19fa1",
+      "outputs": [],
+      "console": []
     },
     {
-      "id": "TRpd",
-      "code_hash": "df2cf321fe37945bb5383f4454467c2f",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/plain": ""
-          }
-        }
-      ],
-      "console": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Split into 41 chunks\n\nSample chunk:\n--------------------------------------------------\nThe Personal Wellness Guide\nA Comprehensive Resource for Health and Well-being\n\nPART 1: EXERCISE AND MOVEMENT\n\nChapter 1: Understanding Exercise Basics\n\nExercise is one of the most important things you can do for your health. Regular physical activity can improve your brain health, help manage weigh...\n",
-          "mimetype": "text/plain"
-        }
-      ]
+      "id": "TXez",
+      "code_hash": "c72d00d60c8e942dd697d2003031d89c",
+      "outputs": [],
+      "console": []
     },
     {
       "id": "dNNg",
-      "code_hash": "6754d08ff8b49d18204dc3d1aae664ee",
-      "outputs": [
-        {
-          "type": "error",
-          "ename": "exception",
-          "evalue": "The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable",
-          "traceback": []
-        }
-      ],
-      "console": [
-        {
-          "type": "stream",
-          "name": "stderr",
-          "text": "<span class=\"codehilite\"><div class=\"highlight\"><pre><span></span><span class=\"gt\">Traceback (most recent call last):</span>\n  File <span class=\"nb\">&quot;/tmp/marimo_845231/__marimo__cell_dNNg_.py&quot;</span>, line <span class=\"m\">27</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"n\">embedding_model</span> <span class=\"o\">=</span> <span class=\"n\">LMStudioEmbeddings</span><span class=\"p\">(</span>\n<span class=\"w\">                      </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/tmp/marimo_845231/__marimo__cell_dNNg_.py&quot;</span>, line <span class=\"m\">11</span>, in <span class=\"n\">__init__</span>\n<span class=\"w\">    </span><span class=\"nb\">super</span><span class=\"p\">()</span><span class=\"o\">.</span><span class=\"fm\">__init__</span><span class=\"p\">(</span><span class=\"o\">**</span><span class=\"n\">kwargs</span><span class=\"p\">)</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/pydantic/main.py&quot;</span>, line <span class=\"m\">250</span>, in <span class=\"n\">__init__</span>\n<span class=\"w\">    </span><span class=\"n\">validated_self</span> <span class=\"o\">=</span> <span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">__pydantic_validator__</span><span class=\"o\">.</span><span class=\"n\">validate_python</span><span class=\"p\">(</span><span class=\"n\">data</span><span class=\"p\">,</span> <span class=\"n\">self_instance</span><span class=\"o\">=</span><span class=\"bp\">self</span><span class=\"p\">)</span>\n<span class=\"w\">                     </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/langchain_openai/embeddings/base.py&quot;</span>, line <span class=\"m\">406</span>, in <span class=\"n\">validate_environment</span>\n<span class=\"w\">    </span><span class=\"bp\">self</span><span class=\"o\">.</span><span class=\"n\">async_client</span> <span class=\"o\">=</span> <span class=\"n\">openai</span><span class=\"o\">.</span><span class=\"n\">AsyncOpenAI</span><span class=\"p\">(</span>\n<span class=\"w\">                        </span><span class=\"pm\">^^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/home/imjonezz/Desktop/AIE9/03_The_Agent_Loop/.venv/lib/python3.12/site-packages/openai/_client.py&quot;</span>, line <span class=\"m\">488</span>, in <span class=\"n\">__init__</span>\n<span class=\"w\">    </span><span class=\"k\">raise</span> <span class=\"n\">OpenAIError</span><span class=\"p\">(</span>\n<span class=\"gr\">openai.OpenAIError</span>: <span class=\"n\">The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable</span>\n</pre></div>\n</span>",
-          "mimetype": "application/vnd.marimo+traceback"
-        }
-      ]
+      "code_hash": "876de9cf228043553a1b6bb54067fe35",
+      "outputs": [],
+      "console": []
     },
     {
       "id": "yCnT",
-      "code_hash": "bdb1f97d6d7335f4c9b8db012687590d",
-      "outputs": [
-        {
-          "type": "error",
-          "ename": "exception",
-          "evalue": "An ancestor raised an exception (OpenAIError): ",
-          "traceback": []
-        }
-      ],
+      "code_hash": "b68f1ae9f7041aeef34776149f6a830f",
+      "outputs": [],
       "console": []
     },
     {
       "id": "wlCL",
-      "code_hash": "4ec6cae4856fa802989d8a9cb93cc981",
-      "outputs": [
-        {
-          "type": "error",
-          "ename": "exception",
-          "evalue": "An ancestor raised an exception (OpenAIError): ",
-          "traceback": []
-        }
-      ],
-      "console": []
-    },
-    {
-      "id": "kqZH",
       "code_hash": "efbad3abbc945ca9869ae38e72236b4d",
-      "outputs": [
-        {
-          "type": "error",
-          "ename": "exception",
-          "evalue": "An ancestor raised an exception (OpenAIError): ",
-          "traceback": []
-        }
-      ],
+      "outputs": [],
       "console": []
     },
     {
-      "id": "rEll",
-      "code_hash": "397feb91e32468575ca84f48c3e44a1b",
-      "outputs": [
-        {
-          "type": "error",
-          "ename": "exception",
-          "evalue": "An ancestor raised an exception (OpenAIError): ",
-          "traceback": []
-        }
-      ],
+      "id": "wAgl",
+      "code_hash": "7c99b57bab5dd3dc937196c2de0a8801",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "dGlV",
+      "code_hash": "46caa4e63a58153b82cd84ba55b3891b",
+      "outputs": [],
       "console": []
     },
     {
       "id": "SdmI",
-      "code_hash": "950d1578f8534606b16f8aecd7ba7aab",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/plain": ""
-          }
-        }
-      ],
-      "console": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Logging middleware created!\n",
-          "mimetype": "text/plain"
-        }
-      ]
+      "code_hash": "9bde224989f6e4e01994874ea8954cfd",
+      "outputs": [],
+      "console": []
     },
     {
-      "id": "lgWD",
-      "code_hash": "94a2d98995a089f231363b2666292e0f",
-      "outputs": [
-        {
-          "type": "data",
-          "data": {
-            "text/plain": ""
-          }
-        }
-      ],
-      "console": [
-        {
-          "type": "stream",
-          "name": "stdout",
-          "text": "Call limit middleware created!\n  - Thread limit: 10\n  - Run limit: 5\n",
-          "mimetype": "text/plain"
-        }
-      ]
+      "id": "yOPj",
+      "code_hash": "5e07b3ebb454ca52340ba44c21fea68f",
+      "outputs": [],
+      "console": []
     },
     {
       "id": "fwwy",
-      "code_hash": "2e42cec62f595929d78e9ec2d9fda40c",
+      "code_hash": "8558b3711d585795aee3728e6dd6a43a",
       "outputs": [],
       "console": []
     },
     {
       "id": "LJZf",
-      "code_hash": "eac36185612f7529edc0dff144977651",
+      "code_hash": "f23eeb1d6fb51ac7d19cbf76c2d8a0ba",
       "outputs": [],
       "console": []
     },
     {
       "id": "urSm",
-      "code_hash": "7893c6492eaef192bfff355a2b1bc20d",
+      "code_hash": "3be6403cfb86583cb5b8432fad0862b6",
       "outputs": [],
       "console": []
     },
     {
-      "id": "jxvo",
-      "code_hash": "d2683afcd0f4d92b31b52749a7123255",
+      "id": "mWxS",
+      "code_hash": "ec088727695bc3af93f91056d2f13e38",
       "outputs": [],
       "console": []
     },
     {
-      "id": "CcZR",
-      "code_hash": "d24c90583453738a471add220734a3cb",
-      "outputs": [],
-      "console": []
-    },
-    {
-      "id": "xvXZ",
+      "id": "tZnO",
       "code_hash": "a21a68673dcb4a0481433267b9f31964",
       "outputs": [],
       "console": []
     },
     {
-      "id": "CLip",
+      "id": "xvXZ",
       "code_hash": "c35c48be5c91a0506a6c225914c4e608",
       "outputs": [],
       "console": []
     },
     {
-      "id": "YECM",
+      "id": "CLip",
       "code_hash": "1d0db38904205bec4d6f6f6a1f6cec3e",
       "outputs": [],
       "console": []

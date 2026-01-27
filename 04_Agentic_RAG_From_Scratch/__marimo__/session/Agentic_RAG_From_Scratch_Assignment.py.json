@@ -1,0 +1,920 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.19.6"
+  },
+  "cells": [
+    {
+      "id": "MJUe",
+      "code_hash": "f4352501d74cc62d72acef521ff84ab0",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h1 id=\"agentic-rag-from-scratch-building-with-langgraph-and-open-source-models\">Agentic RAG From Scratch: Building with LangGraph and Open-Source Models</h1>\n<span class=\"paragraph\">In this notebook, we'll look under the hood of <code>create_agent</code> and build an agentic RAG application <strong>from scratch</strong> using LangGraph's low-level primitives and locally-hosted open-source models.</span>\n<span class=\"paragraph\"><strong>Learning Objectives:</strong></span>\n<ul>\n<li>Understand LangGraph's core constructs: StateGraph, nodes, edges, and conditional routing</li>\n<li>Build a ReAct agent from scratch without high-level abstractions</li>\n<li>Use Ollama to run open-source models locally (gpt-oss:20b + embeddinggemma)</li>\n<li>Transition from <code>aimakerspace</code> utilities to the LangChain ecosystem</li>\n</ul>\n<h2 id=\"table-of-contents\">Table of Contents:</h2>\n<ul>\n<li>\n<span class=\"paragraph\"><strong>Breakout Room #1:</strong> LangGraph Fundamentals &amp; Building Agents from Scratch</span>\n<ul>\n<li>Task 1: Dependencies &amp; Ollama Setup</li>\n<li>Task 2: LangGraph Core Concepts (StateGraph, Nodes, Edges)</li>\n<li>Task 3: Building a ReAct Agent from Scratch</li>\n<li>Task 4: Adding Tools to Your Agent</li>\n<li>Question #1 &amp; Question #2</li>\n<li>Activity #1: Implement a Custom Routing Function</li>\n</ul>\n</li>\n<li>\n<span class=\"paragraph\"><strong>Breakout Room #2:</strong> Agentic RAG with Local Models</span>\n<ul>\n<li>Task 5: Loading &amp; Chunking with LangChain</li>\n<li>Task 6: Setting up Qdrant with Local Embeddings</li>\n<li>Task 7: Creating a RAG Tool</li>\n<li>Task 8: Building Agentic RAG from Scratch</li>\n<li>Question #3 &amp; Question #4</li>\n<li>Activity #2: Extend the Agent with Memory</li>\n</ul>\n</li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "vblA",
+      "code_hash": "7cf1798adf1605c47493c5f5ad66b894",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h1 id=\"breakout-room-1\">Breakout Room #1</h1>\n<h2 id=\"langgraph-fundamentals-building-agents-from-scratch\">LangGraph Fundamentals &amp; Building Agents from Scratch</h2></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "f3e110bddd3276a76b7b1ebe6efa1897",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-1-dependencies-ollama-setup\">Task 1: Dependencies &amp; Ollama Setup</h2>\n<span class=\"paragraph\">Before we begin, make sure you have:</span>\n<ol>\n<li><strong>Ollama installed</strong> - Download from <a href=\"https://ollama.com/\" rel=\"noopener noreferrer\" target=\"_blank\">ollama.com</a></li>\n<li><strong>Ollama running</strong> - Start with <code>ollama serve</code> in a terminal</li>\n<li><strong>Models pulled</strong> - Run these commands:</li>\n</ol>\n<div class=\"language-bash codehilite\"><pre><span></span><code><span class=\"c1\"># Chat model for reasoning and generation (~12GB)</span>\nollama<span class=\"w\"> </span>pull<span class=\"w\"> </span>gpt-oss:20b\n\n<span class=\"c1\"># Embedding model for RAG (~622MB)</span>\nollama<span class=\"w\"> </span>pull<span class=\"w\"> </span>embeddinggemma\n</code></pre></div>\n<blockquote>\n<span class=\"paragraph\"><strong>Note</strong>: If you don't have enough RAM/VRAM for <code>gpt-oss:20b</code> (requires 16GB+ VRAM or 24GB+ RAM), you can substitute with <code>llama3.2:3b</code> or another smaller model.</span>\n</blockquote>\n<span class=\"paragraph\"><strong>\ud83d\udcda Documentation:</strong></span>\n<ul>\n<li><a href=\"https://ollama.com/download\" rel=\"noopener noreferrer\" target=\"_blank\">Ollama Installation Guide</a></li>\n<li><a href=\"https://ollama.com/library/gpt-oss\" rel=\"noopener noreferrer\" target=\"_blank\">gpt-oss Model Card</a></li>\n<li><a href=\"https://ollama.com/library/embeddinggemma\" rel=\"noopener noreferrer\" target=\"_blank\">EmbeddingGemma Model Card</a></li>\n<li><a href=\"https://python.langchain.com/docs/integrations/providers/ollama/\" rel=\"noopener noreferrer\" target=\"_blank\">langchain-ollama Integration</a></li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "cdb01155cbb835d7bb6967938b046180",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-2-langgraph-core-concepts\">Task 2: LangGraph Core Concepts</h2>\n<span class=\"paragraph\">In Session 3, we used <code>create_agent</code> which abstracts away the complexity. Now let's understand what's happening under the hood!</span>\n<h3 id=\"langgraph-models-workflows-as-graphs-with-three-key-components\">LangGraph models workflows as <strong>graphs</strong> with three key components:</h3>\n<h3 id=\"1-state\">1. State</h3>\n<span class=\"paragraph\">A shared data structure that represents the current snapshot of your application:</span>\n<div class=\"language-python codehilite\"><pre><span></span><code><span class=\"k\">class</span><span class=\"w\"> </span><span class=\"nc\">AgentState</span><span class=\"p\">(</span><span class=\"n\">TypedDict</span><span class=\"p\">):</span>\n    <span class=\"n\">messages</span><span class=\"p\">:</span> <span class=\"n\">Annotated</span><span class=\"p\">[</span><span class=\"nb\">list</span><span class=\"p\">,</span> <span class=\"n\">add_messages</span><span class=\"p\">]</span>  <span class=\"c1\"># Conversation history</span>\n</code></pre></div>\n<span class=\"paragraph\">The <code>add_messages</code> <strong>reducer</strong> ensures new messages are appended (not replaced) when the state updates.</span>\n<h3 id=\"2-nodes\">2. Nodes</h3>\n<span class=\"paragraph\">Python functions that encode the logic of your agent:</span>\n<ul>\n<li>Receive the current state</li>\n<li>Perform computation or side-effects</li>\n<li>Return an updated state</li>\n</ul>\n<h3 id=\"3-edges\">3. Edges</h3>\n<span class=\"paragraph\">Functions that determine which node to execute next:</span>\n<ul>\n<li><strong>Normal edges</strong>: Always go to a specific node</li>\n<li><strong>Conditional edges</strong>: Choose the next node based on state</li>\n</ul>\n<span class=\"paragraph\"><strong>\ud83d\udcda Documentation:</strong></span>\n<ul>\n<li><a href=\"https://langchain-ai.github.io/langgraph/concepts/low_level/\" rel=\"noopener noreferrer\" target=\"_blank\">LangGraph Low-Level Concepts</a></li>\n<li><a href=\"https://langchain-ai.github.io/langgraph/tutorials/introduction/\" rel=\"noopener noreferrer\" target=\"_blank\">LangGraph Quickstart</a></li>\n<li><a href=\"https://langchain-ai.github.io/langgraph/reference/graphs/#langgraph.graph.StateGraph\" rel=\"noopener noreferrer\" target=\"_blank\">StateGraph API Reference</a></li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Kclp",
+      "code_hash": "1f86111d997de2e1a7810859bc1ba624",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-3-building-a-react-agent-from-scratch\">Task 3: Building a ReAct Agent from Scratch</h2>\n<span class=\"paragraph\">Now let's build something more sophisticated: a <strong>ReAct agent</strong> that can:</span>\n<ol>\n<li><strong>Reason</strong> about what to do</li>\n<li><strong>Act</strong> by calling tools</li>\n<li><strong>Observe</strong> results</li>\n<li><strong>Repeat</strong> until done</li>\n</ol>\n<span class=\"paragraph\">This is exactly what <code>create_agent</code> does under the hood. Let's build it ourselves!</span>\n<h3 id=\"the-agent-loop-architecture\">The Agent Loop Architecture</h3>\n<div class=\"language-gdscript codehilite\"><pre><span></span><code><span class=\"w\">                    </span><span class=\"err\">\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510</span>\n<span class=\"w\">                    </span><span class=\"err\">\u2502</span><span class=\"w\">    </span><span class=\"n\">START</span><span class=\"w\">     </span><span class=\"err\">\u2502</span>\n<span class=\"w\">                    </span><span class=\"err\">\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518</span>\n<span class=\"w\">                           </span><span class=\"err\">\u2502</span>\n<span class=\"w\">                           </span><span class=\"err\">\u25bc</span>\n<span class=\"w\">                    </span><span class=\"err\">\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510</span>\n<span class=\"w\">             </span><span class=\"err\">\u250c\u2500\u2500\u2500\u2500\u2500\u25ba\u2502</span><span class=\"w\">    </span><span class=\"n\">agent</span><span class=\"w\">     </span><span class=\"err\">\u2502\u25c4\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">      </span><span class=\"err\">\u2502</span><span class=\"w\">  </span><span class=\"p\">(</span><span class=\"n\">call</span><span class=\"w\"> </span><span class=\"n\">LLM</span><span class=\"p\">)</span><span class=\"w\">  </span><span class=\"err\">\u2502</span><span class=\"w\">         </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">      </span><span class=\"err\">\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518</span><span class=\"w\">         </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">                 </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">             </span><span class=\"err\">\u25bc</span><span class=\"w\">                 </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">      </span><span class=\"err\">\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510</span><span class=\"w\">         </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">      </span><span class=\"err\">\u2502</span><span class=\"w\"> </span><span class=\"n\">should_</span><span class=\"w\">      </span><span class=\"err\">\u2502</span><span class=\"w\">         </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">      </span><span class=\"err\">\u2502</span><span class=\"w\"> </span><span class=\"k\">continue</span><span class=\"err\">?</span><span class=\"w\">    </span><span class=\"err\">\u2502</span><span class=\"w\">         </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">      </span><span class=\"err\">\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518</span><span class=\"w\">         </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">                 </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">    </span><span class=\"n\">tool_calls</span><span class=\"err\">?</span><span class=\"w\">                </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">     </span><span class=\"err\">\u2502</span><span class=\"w\">           </span><span class=\"err\">\u2502</span><span class=\"w\">             </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">    </span><span class=\"n\">YES</span><span class=\"w\">         </span><span class=\"n\">NO</span><span class=\"w\">             </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">     </span><span class=\"err\">\u2502</span><span class=\"w\">           </span><span class=\"err\">\u2502</span><span class=\"w\">             </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\">     </span><span class=\"err\">\u25bc</span><span class=\"w\">           </span><span class=\"err\">\u25bc</span><span class=\"w\">             </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\"> </span><span class=\"err\">\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510</span><span class=\"w\">  </span><span class=\"err\">\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510</span><span class=\"w\">         </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2502</span><span class=\"w\"> </span><span class=\"err\">\u2502</span><span class=\"w\"> </span><span class=\"n\">tools</span><span class=\"w\">  </span><span class=\"err\">\u2502</span><span class=\"w\">  </span><span class=\"err\">\u2502</span><span class=\"w\">  </span><span class=\"n\">END</span><span class=\"w\">  </span><span class=\"err\">\u2502</span><span class=\"w\">         </span><span class=\"err\">\u2502</span>\n<span class=\"w\">             </span><span class=\"err\">\u2514\u2500\u2524</span><span class=\"p\">(</span><span class=\"n\">execute</span><span class=\"err\">\u2502</span><span class=\"w\">  </span><span class=\"err\">\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518</span><span class=\"w\">         </span><span class=\"err\">\u2502</span>\n<span class=\"w\">               </span><span class=\"err\">\u2502</span><span class=\"w\"> </span><span class=\"n\">tools</span><span class=\"p\">)</span><span class=\"w\"> </span><span class=\"err\">\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518</span>\n<span class=\"w\">               </span><span class=\"err\">\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518</span>\n</code></pre></div>\n<span class=\"paragraph\"><strong>\ud83d\udcda Documentation:</strong></span>\n<ul>\n<li><a href=\"https://langchain-ai.github.io/langgraph/how-tos/react-agent-from-scratch/\" rel=\"noopener noreferrer\" target=\"_blank\">How to create a ReAct agent from scratch</a></li>\n<li><a href=\"https://langchain-ai.github.io/langgraph/concepts/agentic_concepts/#react-agent\" rel=\"noopener noreferrer\" target=\"_blank\">ReAct Agent Conceptual Guide</a></li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "nWHF",
+      "code_hash": "758ee39a93d6df047688860b0e518b58",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-4-adding-tools-to-your-agent\">Task 4: Adding Tools to Your Agent</h2>\n<span class=\"paragraph\">Tools are functions that the agent can call. We use the <code>@tool</code> decorator and <strong>bind</strong> them to the LLM.</span>\n<span class=\"paragraph\"><strong>\ud83d\udcda Documentation:</strong></span>\n<ul>\n<li><a href=\"https://python.langchain.com/docs/concepts/tools/\" rel=\"noopener noreferrer\" target=\"_blank\">LangChain Tools Conceptual Guide</a></li>\n<li><a href=\"https://python.langchain.com/api_reference/core/tools/langchain_core.tools.convert.tool.html\" rel=\"noopener noreferrer\" target=\"_blank\">@tool Decorator Reference</a></li>\n<li><a href=\"https://langchain-ai.github.io/langgraph/reference/prebuilt/#langgraph.prebuilt.tool_node.ToolNode\" rel=\"noopener noreferrer\" target=\"_blank\">ToolNode Prebuilt</a></li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Pvdt",
+      "code_hash": "e73fc00ebd5cb3acf9c3d450356f398e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h2 id=\"question-1\">\u2753 Question #1:</h2>\n<span class=\"paragraph\">In our from-scratch agent, we defined a <code>should_continue</code> function that returns either <code>\"tools\"</code> or <code>\"end\"</code>. How does this compare to how <code>create_agent</code> handles the same decision? What additional logic might <code>create_agent</code> include that we didn't implement?</span>\n<h5 id=\"answer\">Answer:</h5>\n<span class=\"paragraph\"><em>Both check for tool calls to decide whether to execute tools or end, but <code>create_agent</code> wraps this in a more robust implementation that handles edge cases we naive builders didn't bother thinking about.</em></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "ZBYS",
+      "code_hash": "0c0b7fa333317ac659d1b17fb6253e60",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"question-2\">\u2753 Question #2:</h2>\n<span class=\"paragraph\">We used <code>ToolNode</code> from <code>langgraph.prebuilt</code> to execute tools. Looking at the tool execution flow, what would happen if we wanted to add logging, error handling, or rate limiting to tool execution? How would building our own tool node give us more control?</span>\n<h5 id=\"answer\">Answer:</h5>\n<span class=\"paragraph\">Building your own tool node lets you wrap tool calls with logging, error handling, and rate limiting middleware - capabilities ToolNode keeps locked away.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "aLJB",
+      "code_hash": "e67511de31f9c9a26fe3afa1b8bf436f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h2 id=\"activity-1-implement-a-custom-routing-function\">\ud83c\udfd7\ufe0f Activity #1: Implement a Custom Routing Function</h2>\n<span class=\"paragraph\">Extend the agent by implementing a <strong>custom routing function</strong> that adds more sophisticated logic.</span>\n<span class=\"paragraph\">Ideas:</span>\n<ul>\n<li>Add a maximum iteration limit to prevent infinite loops</li>\n<li>Route to different nodes based on the type of tool being called</li>\n<li>Add a \"thinking\" step before tool execution</li>\n</ul>\n<span class=\"paragraph\">Requirements:</span>\n<ol>\n<li>Modify the <code>should_continue</code> function or create a new one</li>\n<li>Add any new nodes if needed</li>\n<li>Rebuild and test the agent</li>\n</ol>\n<span class=\"paragraph\"><strong>\ud83d\udcda Documentation:</strong></span>\n<ul>\n<li><a href=\"https://langchain-ai.github.io/langgraph/concepts/low_level/#conditional-edges\" rel=\"noopener noreferrer\" target=\"_blank\">Conditional Edges</a></li>\n<li><a href=\"https://langchain-ai.github.io/langgraph/how-tos/branching/\" rel=\"noopener noreferrer\" target=\"_blank\">How to create branches for parallel node execution</a></li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "AjVT",
+      "code_hash": "7fb2602176b305f2abd163ca0122cf25",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h1 id=\"breakout-room-2\">Breakout Room #2</h1>\n<h2 id=\"agentic-rag-with-local-models\">Agentic RAG with Local Models</h2></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "pHFh",
+      "code_hash": "1bd467c8ac367fab0ac6da9d720ec3be",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\">Now let's build a full <strong>Agentic RAG</strong> system from scratch using our local models!</span>\n<span class=\"paragraph\">We'll transition from the <code>aimakerspace</code> utilities to the <strong>LangChain ecosystem</strong>:</span>\n<table>\n<thead>\n<tr>\n<th>Task</th>\n<th>aimakerspace</th>\n<th>LangChain</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Load Documents</td>\n<td><code>TextFileLoader</code></td>\n<td><code>TextLoader</code></td>\n</tr>\n<tr>\n<td>Split Text</td>\n<td><code>CharacterTextSplitter</code></td>\n<td><code>RecursiveCharacterTextSplitter</code></td>\n</tr>\n<tr>\n<td>Embeddings</td>\n<td>Custom</td>\n<td><code>OllamaEmbeddings</code></td>\n</tr>\n</tbody>\n</table></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "NCOB",
+      "code_hash": "321eb303a600c856956ca9713ac22f05",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-5-loading-chunking-with-langchain\">Task 5: Loading &amp; Chunking with LangChain</h2>\n<span class=\"paragraph\">Let's use LangChain's document loaders and text splitters.</span>\n<span class=\"paragraph\"><strong>\ud83d\udcda Documentation:</strong></span>\n<ul>\n<li><a href=\"https://python.langchain.com/docs/concepts/document_loaders/\" rel=\"noopener noreferrer\" target=\"_blank\">Document Loaders Conceptual Guide</a></li>\n<li><a href=\"https://python.langchain.com/api_reference/community/document_loaders/langchain_community.document_loaders.text.TextLoader.html\" rel=\"noopener noreferrer\" target=\"_blank\">TextLoader Reference</a></li>\n<li><a href=\"https://python.langchain.com/docs/how_to/recursive_text_splitter/\" rel=\"noopener noreferrer\" target=\"_blank\">RecursiveCharacterTextSplitter</a></li>\n<li><a href=\"https://python.langchain.com/docs/concepts/text_splitters/\" rel=\"noopener noreferrer\" target=\"_blank\">Text Splitters Conceptual Guide</a></li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "TXez",
+      "code_hash": "2765948fbcd4ddcad4c21cbb400a9509",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-6-setting-up-qdrant-with-local-embeddings\">Task 6: Setting up Qdrant with Local Embeddings</h2>\n<span class=\"paragraph\">Now we'll use <strong>OllamaEmbeddings</strong> with the <code>embeddinggemma</code> model - completely local!</span>\n<span class=\"paragraph\"><strong>\ud83d\udcda Documentation:</strong></span>\n<ul>\n<li><a href=\"https://python.langchain.com/api_reference/ollama/embeddings/langchain_ollama.embeddings.OllamaEmbeddings.html\" rel=\"noopener noreferrer\" target=\"_blank\">OllamaEmbeddings Reference</a></li>\n<li><a href=\"https://python.langchain.com/docs/integrations/vectorstores/qdrant/\" rel=\"noopener noreferrer\" target=\"_blank\">Qdrant Vector Store Integration</a></li>\n<li><a href=\"https://python.langchain.com/docs/concepts/embedding_models/\" rel=\"noopener noreferrer\" target=\"_blank\">Embedding Models Conceptual Guide</a></li>\n<li><a href=\"https://ai.google.dev/gemma/docs/embeddinggemma\" rel=\"noopener noreferrer\" target=\"_blank\">EmbeddingGemma Overview (Google)</a></li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "wAgl",
+      "code_hash": "a13a4e67696ade52eba65c5017f476b7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-7-creating-a-rag-tool\">Task 7: Creating a RAG Tool</h2>\n<span class=\"paragraph\">Now let's wrap our retriever as a tool that the agent can use.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "dGlV",
+      "code_hash": "8364a51e600aae71d9e848a2054828b4",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"task-8-building-agentic-rag-from-scratch\">Task 8: Building Agentic RAG from Scratch</h2>\n<span class=\"paragraph\">Now let's put it all together - a complete agentic RAG system built from scratch!</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "mWxS",
+      "code_hash": "d7f251ece757cad0c92593f234c4a707",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h2 id=\"question-3\">\u2753 Question #3:</h2>\n<span class=\"paragraph\">Compare the experience of building an agent from scratch with LangGraph versus using <code>create_agent</code> from Session 3. What are the trade-offs between control and convenience? When would you choose one approach over the other?</span>\n<h5 id=\"answer\">Answer:</h5>\n<span class=\"paragraph\"><em>Building from scratch gives you complete control and visibility but requires writing every component yourself, while <code>create_agent</code> gets you running quickly with the convenient trade-off that debugging becomes an exercise in guessing what's happening behind the abstraction.</em></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "CcZR",
+      "code_hash": "a97dc68211e1816ade754f919f7eb615",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"question-4\">\u2753 Question #4:</h2>\n<span class=\"paragraph\">We used local models (gpt-oss:20b and embeddinggemma) instead of cloud APIs. What are the advantages and disadvantages of this approach?</span>\n<h5 id=\"answer\">Answer:</h5>\n<span class=\"paragraph\"><em>Local models keep your data private and avoid API costs, though you'll pay for it with slower inference and the hardware requirements that make your laptop sound like a jet engine.</em></span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "YWSi",
+      "code_hash": "edf765ad61236bdae87b97e6271b909d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h2 id=\"activity-2-extend-the-agent-with-memory\">\ud83c\udfd7\ufe0f Activity #2: Extend the Agent with Memory</h2>\n<span class=\"paragraph\">LangGraph supports <strong>checkpointing</strong> which enables conversation memory across invocations.</span>\n<span class=\"paragraph\">Your task: Add memory to the RAG agent so it can:</span>\n<ol>\n<li>Remember previous questions in the conversation</li>\n<li>Reference past context when answering new questions</li>\n<li>Build on previous answers</li>\n</ol>\n<span class=\"paragraph\">Hint: Use <code>MemorySaver</code> from <code>langgraph.checkpoint.memory</code> and pass a <code>thread_id</code> in the config.</span>\n<span class=\"paragraph\"><strong>\ud83d\udcda Documentation:</strong></span>\n<ul>\n<li><a href=\"https://langchain-ai.github.io/langgraph/concepts/persistence/\" rel=\"noopener noreferrer\" target=\"_blank\">LangGraph Persistence &amp; Memory</a></li>\n<li><a href=\"https://langchain-ai.github.io/langgraph/how-tos/persistence/\" rel=\"noopener noreferrer\" target=\"_blank\">How to add memory to your graph</a></li>\n<li><a href=\"https://langchain-ai.github.io/langgraph/reference/checkpoints/#langgraph.checkpoint.memory.MemorySaver\" rel=\"noopener noreferrer\" target=\"_blank\">MemorySaver Reference</a></li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "xvXZ",
+      "code_hash": "6f087db6a2c1cb6407a9e2ff4621eb97",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><hr />\n<h2 id=\"summary\">Summary</h2>\n<span class=\"paragraph\">In this session, we:</span>\n<ol>\n<li><strong>Built agents from scratch</strong> using LangGraph's low-level primitives (StateGraph, nodes, edges)</li>\n<li><strong>Used local open-source models</strong> with Ollama (gpt-oss:20b + embeddinggemma)</li>\n<li><strong>Transitioned to LangChain</strong> for document loading and text splitting</li>\n<li><strong>Created an Agentic RAG system</strong> that intelligently decides when to retrieve information</li>\n</ol>\n<h3 id=\"key-takeaways\">Key Takeaways:</h3>\n<ul>\n<li><strong>StateGraph</strong> gives you full control over agent architecture</li>\n<li><strong>Conditional edges</strong> enable dynamic routing based on LLM decisions</li>\n<li><strong>Local models</strong> provide privacy and cost savings, with trade-offs in performance</li>\n<li><strong>LangSmith</strong> provides crucial visibility regardless of where your models run</li>\n</ul>\n<h3 id=\"whats-next\">What's Next?</h3>\n<span class=\"paragraph\">Now that you understand the fundamentals, you can:</span>\n<ul>\n<li>Add more sophisticated routing logic</li>\n<li>Implement human-in-the-loop patterns</li>\n<li>Build multi-agent systems</li>\n<li>Deploy to production with LangGraph Platform</li>\n</ul>\n<span class=\"paragraph\"><strong>\ud83d\udcda Further Reading:</strong></span>\n<ul>\n<li><a href=\"https://langchain-ai.github.io/langgraph/how-tos/\" rel=\"noopener noreferrer\" target=\"_blank\">LangGraph How-To Guides</a></li>\n<li><a href=\"https://langchain-ai.github.io/langgraph/how-tos/human_in_the_loop/\" rel=\"noopener noreferrer\" target=\"_blank\">Human-in-the-Loop Patterns</a></li>\n<li><a href=\"https://langchain-ai.github.io/langgraph/concepts/multi_agent/\" rel=\"noopener noreferrer\" target=\"_blank\">Multi-Agent Architectures</a></li>\n<li><a href=\"https://langchain-ai.github.io/langgraph/concepts/langgraph_platform/\" rel=\"noopener noreferrer\" target=\"_blank\">LangGraph Platform</a></li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Hbol",
+      "code_hash": "1d0db38904205bec4d6f6f6a1f6cec3e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "6e3d6df0d702d1e02604d091f82f9107",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "0fcea2b386548740dbe82f48c35bf35a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Chat Model Test: Ollama is working!\nEmbedding Model Test: Vector dimension = 768\n\nOllama is ready!\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "SFPL",
+      "code_hash": "a6daa97597e5a07e8fb7dd145ae567e3",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Simple echo graph created!\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "BYtC",
+      "code_hash": "61347dd72b88b2b2e51a057d8257df7c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><marimo-mime-renderer data-mime='&quot;application/vnd.marimo+mimebundle&quot;' data-data='{&quot;image/png&quot;:&quot;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&quot;}'></marimo-mime-renderer></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "RGSE",
+      "code_hash": "e56685655d5ebe4c5e5e04126304d95c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conversation:\n  [AI]: You said: Hello, LangGraph!\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "emfo",
+      "code_hash": "5fc0aa6968349e8225c5face1206b7e4",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "AgentState defined with messages field\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "Hstk",
+      "code_hash": "cfcb4bead5c7cdf28f0870274515a341",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "LLM initialized: gpt-oss:20b with reasoning enabled\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "iLit",
+      "code_hash": "5c9dfd9f9cfb5e2ea99dfc94cadf5899",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Tools defined and bound to LLM:\n  - calculate: Evaluate a mathematical expression. Use this for a...\n  - get_current_time: Get the current date and time. Use this when the u...\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "ZHCJ",
+      "code_hash": "8a949e34a1d9c44269116327459a3b6b",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Agent node defined\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "ROlb",
+      "code_hash": "49a118d245122876c363a4aeaf7f8a93",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Tool node created using ToolNode prebuilt\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "qnkX",
+      "code_hash": "63e87c92fcd993bb2203e5da60f83ad2",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Conditional routing function defined\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "TqIu",
+      "code_hash": "4f35184354759ef91bbf574c05b9d174",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "ReAct agent built from scratch!\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "Vxnm",
+      "code_hash": "1e3744df1de831e1210198aee445c5b8",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><marimo-mime-renderer data-mime='&quot;application/vnd.marimo+mimebundle&quot;' data-data='{&quot;image/png&quot;:&quot;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&quot;}'></marimo-mime-renderer></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "DnEU",
+      "code_hash": "92da74f8e328b208179d183e43a2d614",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Testing our from-scratch agent:\n==================================================\n\nConversation:\n  [HumanMessage]: What is 25 * 48?\n  [AIMessage]: [Tool calls: [{'name': 'calculate', 'args': {'expression': '25 * 48'}, 'id': '20b69931-57e2-47cd-ab1e-268da950391c', 'type': 'tool_call'}]]\n  [ToolMessage]: The result of 25 * 48 is 1200\n  [AIMessage]: 1200\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "ulZA",
+      "code_hash": "e1beb27d84bf2db90fee02a2c937cfa1",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Testing with multiple tool calls:\n==================================================\n\nFinal response:\nIt\u2019s 12:08\u202fPM.  \n100 divided by the current hour (12) is **8.33**.\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "ecfG",
+      "code_hash": "8aeba28d609dbff98666a93d298e4d1a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Streaming agent execution:\n==================================================\n\n[Node: agent]\n  Tool calls: ['calculate']\n\n[Node: tools]\n  Content: The result of 0.15*200 is 30.0\n\n[Node: agent]\n  Content: 30.\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "nHfw",
+      "code_hash": "e653fac7730def90f3e575cb8dcacf6c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Custom agent built with:\n  - Iteration limit: 25\n  - Thinking step before tool execution\n  - Tool-type aware routing (calculation vs info tools)\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "xXTn",
+      "code_hash": "6d5d19ebd95e193b64111bc9d2274c6a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Testing Custom Agent with Advanced Routing:\n======================================================================\n\n----------------------------------------------------------------------\nQuery 1: What is 25 * 48 + 130 / 10?\n----------------------------------------------------------------------\nFinal iteration count: 3\n\nExecution flow:\n  [HumanMessage]: What is 25 * 48 + 130 / 10?\n  [AIMessage]: [Tool calls: [{'name': 'calculate', 'args': {'expression': '25 * 48 + 130 / 10'}, 'id': '1e229674-9c70-462a-a753-a2806bfe0677', 'type': 'tool_call'}]]\n  [AIMessage]: [Thinking] We need to compute 25 * 48 + 130 / 10. Use tool calculate.\n  [AIMessage]: commentary<|channel|>analysis<|message|>The result.\n  [ToolMessage]: The result of 25 * 48 + 130 / 10 is 1213.0\n  [AIMessage]: 1213.0\n\n----------------------------------------------------------------------\nQuery 2: What time is it right now?\n----------------------------------------------------------------------\nFinal iteration count: 3\n\nExecution flow:\n  [HumanMessage]: What time is it right now?\n  [AIMessage]: [Tool calls: [{'name': 'get_current_time', 'args': {}, 'id': '470f6798-c713-488b-aa03-1c9399293336', 'type': 'tool_call'}]]\n  [AIMessage]: [Thinking] User asks current time. Use get_current_time.\n  [AIMessage]: commentary<|channel|>analysis<|message|>We need to call get_current_time.\n  [ToolMessage]: The current date and time is: 2026-01-27 12:08:32\n  [AIMessage]: It\u2019s 12:08\u202fPM on January\u202f27,\u202f2026.\n\n----------------------------------------------------------------------\nQuery 3: Calculate 15% of 200 and tell me the current hour\n----------------------------------------------------------------------\nFinal iteration count: 3\n\nExecution flow:\n  [HumanMessage]: Calculate 15% of 200 and tell me the current hour\n  [AIMessage]: [Tool calls: [{'name': 'get_current_time', 'args': {}, 'id': 'b91fca8f-703b-491d-862f-6f9011d7829b', 'type': 'tool_call'}]]\n  [AIMessage]: [Thinking] We need to calculate 15% of 200. That's 0.15 * 200 = 30. Then get current hour. Use get_current_time.\n  [AIMessage]: commentary<|channel|>analysis<|message|>We need to call get_current_time.\n  [ToolMessage]: The current date and time is: 2026-01-27 12:08:38\n  [AIMessage]: 15\u202f% of\u202f200 is **30**.  \nThe current hour is **12**.\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "aqbW",
+      "code_hash": "9bebfd5fc55a9208dd8f55202db30d0e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Loaded 1 document(s)\nTotal characters: 16,206\n\nDocument metadata: {'source': 'data/HealthWellnessGuide.txt'}\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "TRpd",
+      "code_hash": "75fa0ae25399920460d7a51a9708c6d2",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Split into 45 chunks\n\nSample chunk (first 300 chars):\n--------------------------------------------------\nThe Personal Wellness Guide\nA Comprehensive Resource for Health and Well-being\n\nPART 1: EXERCISE AND MOVEMENT\n\nChapter 1: Understanding Exercise Basics\n\nExercise is one of the most important things you can do for your health. Regular physical activity can improve your brain health, help manage weigh...\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "dNNg",
+      "code_hash": "88176e46065e9f9c9ae7a52c46bc71da",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Embedding dimension: 768\nUsing local model: embeddinggemma\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "yCnT",
+      "code_hash": "667fe0cb6f4a3fabed640ef6d5fd8c1f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Created collection: wellness_knowledge_base_local\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "wlCL",
+      "code_hash": "7da9700f9ee3d01a1630cd7d44c759d2",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Adding documents to vector store (this may take a moment with local embeddings)...\nAdded 45 documents to vector store\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "kqZH",
+      "code_hash": "efbad3abbc945ca9869ae38e72236b4d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Retrieved documents:\n\n--- Document 1 ---\nChapter 8: Improving Sleep Quality\n\nSleep hygiene refers to habits and practices that promote consistent, quality sleep.\n\nEssential sleep hygiene practices:\n- Maintain a consistent sleep schedule, eve...\n\n--- Document 2 ---\nCreating an optimal sleep environment:\n- Temperature: 65-68 degrees Fahrenheit (18-20 Celsius)\n- Darkness: Use blackout curtains or a sleep mask\n- Quiet: Consider white noise machines or earplugs\n- Co...\n\n--- Document 3 ---\nTypes of insomnia:\n- Acute insomnia: Short-term, often triggered by stress or life events\n- Chronic insomnia: Long-term, occurring at least 3 nights per week for 3 months or more\n\nNatural remedies for...\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "rEll",
+      "code_hash": "c68827a85674a27e883cbe48fedd09e9",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RAG tool created: search_wellness_knowledge\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "SdmI",
+      "code_hash": "ceae7e5da34c2aa5b05d5b293be5f15d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Tools for RAG agent:\n  - search_wellness_knowledge\n  - calculate\n  - get_current_time\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "lgWD",
+      "code_hash": "cc44fa3fdb135f4108dde5c47ace3846",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RAG agent node defined\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "yOPj",
+      "code_hash": "04beba2f5ef5b1cc5719f60fc8d5c9e1",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Agentic RAG built from scratch!\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "fwwy",
+      "code_hash": "20030fca1cde01f72f19709203fa2d85",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><marimo-mime-renderer data-mime='&quot;application/vnd.marimo+mimebundle&quot;' data-data='{&quot;image/png&quot;:&quot;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&quot;}'></marimo-mime-renderer></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "LJZf",
+      "code_hash": "0cce0b1caf73712121f5c239236ed41b",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Testing Agentic RAG (with local models):\n==================================================\n\nFinal Response:\n==================================================\nHere are some evidence\u2011based tips that can help you fall asleep faster, stay asleep longer, and wake up feeling refreshed:\n\n| Tip | Why it works | How to implement it |\n|-----|--------------|---------------------|\n| **Keep a consistent sleep schedule** | Your body\u2019s internal clock (circadian rhythm) thrives on routine. | Go to bed and wake up at the same time every day\u2014even on weekends. |\n| **Create a calming pre\u2011bed routine** | Activities that relax the mind and body signal the brain that it\u2019s time to wind down. | Read a book, do gentle stretches, or take a warm bath 30\u201360\u202fmin before bed. |\n| **Optimize your bedroom environment** | Light, noise, temperature, and comfort all influence sleep quality. | \u2022 Keep the room cool (65\u201368\u202f\u00b0F / 18\u201320\u202f\u00b0C). <br>\u2022 Use blackout curtains or a sleep mask to block light. <br>\u2022 Reduce noise with earplugs or a white\u2011noise machine. <br>\u2022 Invest in a supportive mattress and pillows. |\n| **Limit screen time before bed** | Blue light from phones, tablets, and TVs suppresses melatonin, the hormone that signals sleep. | Turn off screens at least 1\u20132\u202fh before bedtime. If you must use a device, use a blue\u2011light filter or \u201cnight mode.\u201d |\n| **Watch caffeine and alcohol** | Caffeine can stay in your system for 4\u20136\u202fh, while alcohol can fragment sleep. | Avoid caffeine after 2\u202fp.m. and limit alcohol to a small amount earlier in the evening. |\n| **Mindful eating and drinking** | Heavy meals, spicy foods, or large amounts of liquid can cause discomfort or nighttime trips to the bathroom. | Finish eating at least 2\u20133\u202fh before bed and keep snacks light. |\n| **Regular physical activity** | Exercise promotes deeper sleep, but exercising too close to bedtime can be stimulating. | Aim for moderate exercise most days, finishing at least 3\u202fh before you plan to sleep. |\n| **Manage stress and worries** | Racing thoughts can keep you awake. | Try relaxation techniques such as deep breathing, progressive muscle relaxation, or journaling about your day. |\n| **Limit daytime naps** | Long or late naps can interfere with nighttime sleep. | If you nap, keep it under 20\u201330\u202fmin and earlier in the afternoon. |\n\n**Quick checklist for a good night\u2019s sleep**\n\n1. **Set a bedtime** and stick to it.  \n2. **Wind down** with a relaxing activity.  \n3. **Make your bedroom a sleep sanctuary** (cool, dark, quiet).  \n4. **Avoid screens, caffeine, and heavy meals** before bed.  \n5. **Exercise regularly** but not right before sleep.  \n6. **Use relaxation techniques** if stress is keeping you awake.\n\n---\n\n**Why these tips matter**\n\n- Sleep hygiene\u2014habits that promote consistent, quality sleep\u2014is a cornerstone of good sleep health (Source\u202f1).  \n- A cool, dark, and quiet environment has been shown to improve sleep onset and depth (Source\u202f2).  \n- Adults need 7\u20139\u202fhours of sleep, and sleep cycles last about 90\u202fminutes, so a regular schedule helps you complete full cycles (Source\u202f3).\n\n---\n\n**Feeling stuck?**  \nIf you try these strategies and still struggle to sleep, it might help to keep a sleep diary or talk to a healthcare professional. They can check for underlying issues like insomnia or sleep apnea.\n\nSweet dreams! \ud83c\udf19\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "urSm",
+      "code_hash": "7aabcb7508bfc0a1bdfd1b9e7cdf3af7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Testing with complex query:\n==================================================\n\nFinal Response:\n==================================================\nI\u2019m sorry you\u2019re feeling so stressed and having trouble sleeping\u2014those two can feed into each other in a tough cycle. Below are some evidence\u2011based steps you can try right away to ease stress and improve sleep quality. I\u2019ve pulled in key points from our wellness knowledge base to give you a clear, actionable plan.\n\n---\n\n## 1. Create a Calm Sleep Environment  \n*(Source\u202f1, Source\u202f2)*  \n| Element | What to Do | Why It Helps |\n|---------|------------|--------------|\n| **Temperature** | Keep the room 65\u201368\u202f\u00b0F (18\u201320\u202f\u00b0C). | Cooler temperatures signal the body to drop core temperature, which is essential for sleep onset. |\n| **Darkness** | Use blackout curtains or a sleep mask. | Darkness triggers melatonin production, the hormone that regulates sleep. |\n| **Quiet** | Try a white\u2011noise machine, fan, or earplugs. | Reduces sudden noises that can wake you. |\n| **Comfort** | Invest in a supportive mattress and pillows. | Good ergonomics reduce pain and restlessness. |\n\n---\n\n## 2. Adopt Good Sleep Hygiene  \n*(Source\u202f2)*  \n1. **Consistent schedule** \u2013 Go to bed and wake up at the same time every day, even on weekends.  \n2. **Wind\u2011down routine** \u2013 30\u201360\u202fmin before bed, do calming activities: reading, gentle stretching, or a warm bath.  \n3. **Limit screens** \u2013 Turn off phones, tablets, and TVs 1\u20132\u202fhours before bed. Blue light suppresses melatonin.  \n4. **Caffeine & alcohol** \u2013 Avoid caffeine after 2\u202fPM and limit alcohol, especially close to bedtime.  \n5. **Exercise** \u2013 Regular activity helps, but finish at least 2\u20133\u202fhours before sleep.  \n6. **Meals** \u2013 Light dinner, avoid heavy or spicy foods right before bed.  \n\n---\n\n## 3. Stress\u2011Reduction Techniques  \n*(Source\u202f3)*  \n- **Deep breathing** \u2013 Inhale for 4 counts, hold 4, exhale 4. Repeat 5\u201310 times.  \n- **Progressive muscle relaxation** \u2013 Tense each muscle group for 5\u202fseconds, then release.  \n- **Grounding exercise** \u2013 \u201c5\u20114\u20113\u20112\u20111\u201d method: name 5 things you see, 4 you hear, 3 you feel, 2 you smell, 1 you taste.  \n- **Short walk** \u2013 Especially in nature; fresh air and gentle movement lower cortisol.  \n- **Calming music or nature sounds** \u2013 Low\u2011tempo tracks can lower heart rate and promote relaxation.  \n\n---\n\n## 4. Quick \u201cReset\u201d for Tonight  \n1. **Set a bedtime alarm** (e.g., 9\u202fPM).  \n2. **Turn off screens** 30\u202fmin before.  \n3. **Do 5 minutes of deep breathing**.  \n4. **Read a short, non\u2011stimulating chapter** or listen to a calming podcast.  \n5. **Get into bed** at the same time you set the alarm.  \n\n---\n\n## 5. Tracking Progress  \n- Keep a simple sleep diary: bedtime, wake time, perceived sleep quality, and any stressors.  \n- Note how you feel the next day\u2014energy, mood, focus.  \n\n---\n\n## 6. When to Seek Professional Help  \nIf you\u2019ve tried these strategies for 2\u20134\u202fweeks and still struggle with sleep or stress, consider speaking with a healthcare provider or therapist. Chronic insomnia or anxiety may benefit from counseling, CBT\u2011I (Cognitive Behavioral Therapy for Insomnia), or medication.\n\n---\n\n### Quick Math Check  \nYou asked: *\u201cIf I sleep 6 hours a night for a week, how many total hours is that?\u201d*  \n6\u202fhours/night \u00d7 7\u202fdays = **42 hours**.  \n\n---\n\n### Takeaway  \n- **Small, consistent changes** in your environment and routine can make a big difference.  \n- **Stress relief techniques** are powerful tools you can use anytime, even during the day.  \n- **Track and adjust**\u2014what works for one person may need tweaking for you.  \n\nYou\u2019ve already taken the first step by reaching out. Keep experimenting with these suggestions, and you\u2019ll likely see improvements in both your stress levels and sleep quality. \ud83c\udf19\u2728\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "jxvo",
+      "code_hash": "bc13246a401754e2679b9dfa6e7ab984",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Testing agent decision-making (should NOT use RAG):\n==================================================\n\nFinal Response:\n125\u202f\u00d7\u202f8\u202f=\u202f**1,000**.\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "zlud",
+      "code_hash": "8b5e3ac55bdbc55f60237e6206bccf08",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "RAG agent with memory compiled successfully!\nMemory enables conversation context across multiple invocations.\n\n======================================================================\nInteraction 1: Asking about wellness tips\n======================================================================\nResponse 1: Here are some evidence\u2011based tips that can help you fall asleep faster, stay asleep longer, and wake up feeling refreshed:\n\n| Tip | Why it works | How to implement it |\n|-----|--------------|---------------------|\n| **Keep a consistent sleep schedule** | Your body\u2019s internal clock (circadian rhythm) thrives on routine. | Go to bed and wake up at the same time every day\u2014even on weekends. |\n| **Create a calming pre\u2011bed routine** | Activities that relax the mind and body signal the brain that it\u2019s time to wind down. | Read a book, do gentle stretches, or take a warm bath 30\u201360\u202fmin before bed. |\n| **Optimize your bedroom environment** | Light, noise, temperature, and comfort all influence sleep quality. | \u2022 Keep the room cool (65\u201368\u202f\u00b0F / 18\u201320\u202f\u00b0C). <br>\u2022 Use blackout curtains or a sleep mask to block light. <br>\u2022 Reduce noise with earplugs or a white\u2011noise machine. <br>\u2022 Invest in a supportive mattress and pillows. |\n| **Limit screen time before bed** | Blue light from phones, tablets, and TVs suppresses melatonin, the hormone that signals sleep. | Turn off screens at least 1\u20132\u202fh before bedtime. If you must use a device, use a blue\u2011light filter or \u201cnight mode.\u201d |\n| **Watch caffeine and alcohol** | Caffeine can stay in your system for 4\u20136\u202fh, while alcohol can fragment sleep. | Avoid caffeine after 2\u202fp.m. and limit alcohol to a small amount earlier in the evening. |\n| **Mindful eating and drinking** | Heavy meals, spicy foods, or large amounts of liquid can cause discomfort or nighttime trips to the bathroom. | Finish eating at least 2\u20133\u202fh before bed and keep snacks light. |\n| **Regular physical activity** | Exercise promotes deeper sleep, but exercising too close to bedtime can be stimulating. | Aim for moderate exercise most days, finishing at least 3\u202fh before you plan to sleep. |\n| **Manage stress and worries** | Racing thoughts can keep you awake. | Try relaxation techniques such as deep breathing, progressive muscle relaxation, or journaling about your day. |\n| **Limit daytime naps** | Long or late naps can interfere with nighttime sleep. | If you nap, keep it under 20\u201330\u202fmin and earlier in the afternoon. |\n\n**Quick checklist for a good night\u2019s sleep**\n\n1. **Set a bedtime** and stick to it.  \n2. **Wind down** with a relaxing activity.  \n3. **Make your bedroom a sleep sanctuary** (cool, dark, quiet).  \n4. **Avoid screens, caffeine, and heavy meals** before bed.  \n5. **Exercise regularly** but not right before sleep.  \n6. **Use relaxation techniques** if stress is keeping you awake.\n\n---\n\n**Why these tips matter**\n\n- Sleep hygiene\u2014habits that promote consistent, quality sleep\u2014is a cornerstone of good sleep health (Source\u202f1).  \n- A cool, dark, and quiet environment has been shown to improve sleep onset and depth (Source\u202f2).  \n- Adults need 7\u20139\u202fhours of sleep, and sleep cycles last about 90\u202fminutes, so a regular schedule helps you complete full cycles (Source\u202f3).\n\n---\n\n**Feeling stuck?**  \nIf you try these strategies and still struggle to sleep, it might help to keep a sleep diary or talk to a healthcare professional. They can check for underlying issues like insomnia or sleep apnea.\n\nSweet dreams! \ud83c\udf19\n\n======================================================================\nInteraction 2: Following up with a related question\n======================================================================\nResponse 2: ### A Simple, Energizing Morning Routine\n\nA well\u2011planned start to the day can boost your mood, focus, and overall well\u2011being. Below is a flexible template you can tweak to fit your schedule and preferences. Feel free to keep it short\u2014just 10\u201315\u202fminutes\u2014and build on it over time.\n\n| Step | What to Do | Why It Helps | Quick Tips |\n|------|------------|--------------|------------|\n| **1. Wake at a consistent time** | Sets your circadian rhythm and improves sleep quality. | Aim for the same wake time every day, even weekends. | Use an alarm that gently wakes you (e.g., sunrise simulation). |\n| **2. Hydrate** | Replenishes fluids lost overnight and kick\u2011starts metabolism. | A glass of water (\u2248250\u202fml) can improve alertness. | Keep a water bottle by your bed. |\n| **3. Light movement (5\u201310\u202fmin)** | Increases blood flow, releases endorphins, and wakes the body. | Even gentle stretching or a short walk can boost energy. | Try a quick yoga flow or a few dynamic stretches. |\n| **4. Healthy breakfast** | Provides sustained energy and supports brain function. | Aim for protein, fiber, and healthy fats. | Oatmeal with nuts, Greek yogurt with fruit, or a veggie omelet. |\n| **5. Mindfulness or journaling (2\u20135\u202fmin)** | Reduces stress, sets a positive tone, and clarifies priorities. | A brief gratitude list or breathing exercise can center you. | Write 3 things you\u2019re grateful for or practice 4\u20117\u20118 breathing. |\n| **6. Review goals & priorities** | Keeps you focused and intentional for the day. | A quick \u201cto\u2011do\u201d list or a 3\u2011task focus can improve productivity. | Write down the top 3 tasks you want to accomplish. |\n| **7. Avoid phone & news first thing** | Prevents information overload and anxiety. | Starting with calm activities sets a healthier mindset. | Keep your phone in another room or use \u201cDo Not Disturb\u201d until after breakfast. |\n\n---\n\n#### How to Build and Stick With It\n\n1. **Start Small** \u2013 Commit to just 2\u20133 minutes of a new habit first (Source\u202f2).  \n2. **Habit Stack** \u2013 Attach the new habit to an existing one (e.g., stretch right after you drink water).  \n3. **Make It Obvious** \u2013 Place your water bottle and workout clothes where you\u2019ll see them.  \n4. **Track Progress** \u2013 Use a habit tracker or a simple check\u2011mark system.  \n5. **Be Patient** \u2013 Habits take an average of 66 days to form, so give yourself grace (Source\u202f2).\n\n---\n\n#### Quick \u201cMorning Routine Checklist\u201d (Source\u202f3)\n\n- **Hydration**: 1 glass of water upon waking.  \n- **Movement**: 5\u201310\u202fmin of light exercise.  \n- **Nutrition**: Balanced breakfast with protein, fiber, and healthy fats.  \n- **Mindfulness**: 2\u20135\u202fmin of breathing, gratitude, or journaling.  \n- **Planning**: Review top 3 priorities for the day.  \n\n---\n\n### Final Thought\n\nYour morning routine is a personal ritual\u2014what matters most is that it feels *right* for you. Try one or two elements, see how you feel, and gradually add more. Consistency, not perfection, is the key to lasting change. \ud83c\udf1e\n\nIf you\u2019d like a more tailored plan (e.g., for a busy schedule or specific health goals), just let me know!\n\n======================================================================\nInteraction 3: Referencing both previous topics\n======================================================================\nResponse 3: ### A Cohesive \u201cNight\u2011to\u2011Morning\u201d Wellness Blueprint  \n\nBelow is a step\u2011by\u2011step guide that stitches together the sleep\u2011hygiene habits from the evening with the energizing morning routine we just outlined. The goal is to create a seamless flow that supports both restorative sleep and a productive start to the day.\n\n| Time | Evening (Sleep Prep) | Morning (Wake\u2011Up) | Why It Works |\n|------|----------------------|-------------------|--------------|\n| **10\u201312\u202fpm** | **Wind\u2011Down Ritual** \u2013 Light reading, gentle stretching, or a warm bath. | \u2014 | Signals the brain that it\u2019s time to relax. |\n| **11\u202fpm** | **Screen Cut\u2011Off** \u2013 Turn off all screens; use a blue\u2011light filter if needed. | \u2014 | Reduces melatonin suppression (Source\u202f1). |\n| **11:15\u202fpm** | **Bedroom Environment** \u2013 Cool (65\u201368\u202f\u00b0F), dark (blackout curtains or mask), quiet (earplugs/white noise). | \u2014 | Creates optimal conditions for deep sleep (Source\u202f2). |\n| **11:30\u202fpm** | **Hydrate & Light Snack** \u2013 A small glass of water and a light, protein\u2011rich snack if hungry. | \u2014 | Prevents nighttime thirst or hunger without disrupting sleep. |\n| **11:45\u202fpm** | **Bedtime** \u2013 Consistent sleep schedule; use a calming bedtime routine. | \u2014 | Strengthens circadian rhythm (Source\u202f1). |\n| **6:30\u20137:00\u202fam** | \u2014 | **Wake Up** \u2013 Consistent wake time, even on weekends. | Stabilizes internal clock (Source\u202f1). |\n| **7:00\u202fam** | \u2014 | **Hydrate** \u2013 1 glass of water. | Replenishes overnight fluid loss. |\n| **7:05\u202fam** | \u2014 | **Light Movement** \u2013 5\u201310\u202fmin of stretching or a short walk. | Boosts circulation and endorphins. |\n| **7:15\u202fam** | \u2014 | **Healthy Breakfast** \u2013 Protein + fiber + healthy fats. | Sustained energy for the day. |\n| **7:30\u202fam** | \u2014 | **Mindfulness/Journaling** \u2013 2\u20135\u202fmin gratitude or breathing. | Sets a calm, focused mindset. |\n| **7:35\u202fam** | \u2014 | **Review Goals** \u2013 Top 3 tasks for the day. | Keeps you intentional and productive. |\n| **7:45\u202fam** | \u2014 | **Start Work/Day** | Transition into the day with momentum. |\n\n---\n\n#### How the Pieces Fit Together\n\n1. **Consistent Sleep Schedule**  \n   - *Evening:* Set a bedtime that allows 7\u20139\u202fhours of sleep.  \n   - *Morning:* Wake at the same time each day.  \n   - *Why:* A stable circadian rhythm improves sleep quality and morning alertness (Source\u202f1).\n\n2. **Environment Matters**  \n   - *Evening:* Keep bedroom cool, dark, and quiet.  \n   - *Morning:* Keep the bedroom door open or use a light to signal wakefulness.  \n   - *Why:* Temperature and light cues help regulate melatonin and cortisol (Source\u202f2).\n\n3. **Screen & Caffeine Management**  \n   - *Evening:* No screens 1\u20132\u202fh before bed; avoid caffeine after 2\u202fp.m.  \n   - *Morning:* Skip the phone first thing; start with water and movement.  \n   - *Why:* Blue light and caffeine delay sleep onset; early hydration and movement jump\u2011start metabolism (Source\u202f1).\n\n4. **Nutrition & Hydration**  \n   - *Evening:* Light snack if needed; avoid heavy meals.  \n   - *Morning:* Balanced breakfast and water.  \n   - *Why:* Proper nutrition supports sleep cycles and daytime energy (Source\u202f3).\n\n5. **Mindfulness & Planning**  \n   - *Evening:* Brief reflection or gratitude to wind down.  \n   - *Morning:* 2\u20135\u202fmin mindfulness or journaling to set a calm tone.  \n   - *Why:* Reduces stress and improves focus (Source\u202f3).\n\n---\n\n#### Quick \u201cNight\u2011to\u2011Morning\u201d Checklist\n\n- **Bedtime (11\u202fpm):**  \n  - No screens \u2192 dim lights \u2192 cool room \u2192 light stretch \u2192 water \u2192 bedtime routine \u2192 sleep.  \n- **Morning (7\u202fam):**  \n  - Alarm \u2192 water \u2192 stretch \u2192 breakfast \u2192 2\u2011min gratitude \u2192 top 3 tasks \u2192 start day.\n\n---\n\n### Final Encouragement\n\nThink of this as a *cycle* rather than a checklist. Each night\u2019s sleep sets the stage for the next morning\u2019s energy, and each morning\u2019s routine reinforces healthy sleep habits. Start with one or two elements, track how you feel, and gradually add more. Over time, you\u2019ll notice smoother transitions, deeper sleep, and a more focused, energized day.\n\nYou\u2019ve got this\u2014one night, one morning, one step at a time! \ud83c\udf19\u27a1\ufe0f\u2600\ufe0f\n\n======================================================================\nMemory Test: Using a different thread_id (should NOT have context)\n======================================================================\nResponse with new thread: Here\u2019s a quick recap of what we covered about sleep:\n\n| Topic | Key Take\u2011aways |\n|-------|----------------|\n| **How much sleep you need** | Adults typically need **7\u20139 hours per night**. |\n| **Sleep cycles** | A full cycle lasts about **90 minutes** and alternates between REM (dreaming, brain\u2011active) and non\u2011REM stages. |\n| **The four stages** | 1\ufe0f\u20e3 Light sleep (5\u201310\u202fmin) 2\ufe0f\u20e3 Stage\u202f2 (body temp drops, heart rate slows) 3\ufe0f\u20e3 Deep sleep (repair & regeneration) 4\ufe0f\u20e3 REM (memory consolidation & dreaming). |\n| **Sleep hygiene** | \u2022 Keep a consistent sleep schedule, even on weekends. <br>\u2022 Establish a calming bedtime routine (reading, gentle stretching, warm bath). <br>\u2022 Keep the bedroom cool (65\u201368\u202f\u00b0F / 18\u201320\u202f\u00b0C), dark, and quiet. <br>\u2022 Limit screens 1\u20132\u202fh before bed. <br>\u2022 Avoid caffeine after 2\u202fPM, and limit alcohol & heavy meals before sleep. <br>\u2022 Exercise regularly, but not right before bed. |\n| **Sleep environment** | \u2022 Use blackout curtains or a sleep mask for darkness. <br>\u2022 Consider white\u2011noise machines or earplugs for quiet. <br>\u2022 Invest in a supportive mattress and pillows. |\n| **Insomnia** | Difficulty falling, staying, or waking early affects ~30\u202f% of adults at some point. Good sleep hygiene and a consistent routine are the first steps to managing it. |\n\nIf you\u2019d like to dive deeper into any of these areas\u2014like specific bedtime routines, how to tweak your bedroom, or strategies for insomnia\u2014just let me know! \ud83c\udf19\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    },
+    {
+      "id": "tZnO",
+      "code_hash": "542e7b18a6afb1fa34a8da9768f3f964",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "\n======================================================================\nExtended Memory Test: Multi-turn Wellness Consultation\n======================================================================\n\n--- Turn 1 ---\nQuestion: What are 3 things I can do to improve my sleep quality?\nAnswer: Here are three evidence\u2011based habits that can make a noticeable difference in how well you sleep:\n\n1. **Keep a consistent sleep schedule**  \n   *Go to bed and wake up at the same time every day\u2014even on weekends.*  \n   A regular rhythm helps your body\u2019s internal clock stay aligned, making it easier t...\n\n--- Turn 2 ---\nQuestion: How about nutrition? What foods help with sleep?\nAnswer: **Foods that can help you wind down and sleep better**\n\n| Food | Why it helps | Quick tip |\n|------|--------------|-----------|\n| **Turkey, chicken, fish, and other lean proteins** | Rich in tryptophan, an amino acid that the body turns into serotonin and then melatonin, the \u201csleep hormone.\u201d | Pair ...\n\n--- Turn 3 ---\nQuestion: Can you create a simple evening routine combining the sleep tips and nutrition advice?\nAnswer: ### \ud83c\udf19 Your 30\u2011Minute \u201cWind\u2011Down\u201d Routine  \n*(Feel free to tweak the timing to fit your schedule.)*\n\n| Time | Activity | Why it helps | Source |\n|------|----------|--------------|--------|\n| **7:30\u202fPM** | **Light dinner** \u2013 a small bowl of oatmeal topped with sliced banana and a sprinkle of pumpkin seeds. | Oats give complex carbs, banana supplies tryptophan & potassium, pumpkin seeds add magnesium...\n\n--- Turn 4 ---\nQuestion: What was the first tip you mentioned about sleep?\nAnswer: The first tip I mentioned was:\n\n**\u201cKeep a consistent sleep schedule\u2014go to bed and wake up at the same time every day, even on weekends.\u201d**...\n\n======================================================================\nMemory Test Complete!\n======================================================================\n",
+          "mimetype": "text/plain"
+        }
+      ]
+    }
+  ]
+}

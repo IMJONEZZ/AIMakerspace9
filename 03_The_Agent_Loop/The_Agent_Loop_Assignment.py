@@ -83,7 +83,7 @@ def _():
     import nest_asyncio
 
     nest_asyncio.apply()  # Required for async operations in Jupyter
-    return getpass, os
+    return getpass, os, uuid4
 
 
 @app.cell(hide_code=True)
@@ -106,7 +106,7 @@ def _(getpass, os):
 
 
 @app.cell
-def _(getpass, os):
+def _(getpass, os, uuid4):
     # Set up LangFuse for tracing (self-hosted, open source)
     # This provides powerful debugging and observability for your agents
     # Note: LangFuse server needs to be running at the specified URL
@@ -122,9 +122,7 @@ def _(getpass, os):
         os.environ["LANGFUSE_BASE_URL"] = os.environ.get(
             "LANGFUSE_BASE_URL", "http://localhost:3000"
         )
-        print(
-            f"LangFuse tracing enabled. Base URL: {os.environ['LANGFUSE_BASE_URL']}"
-        )
+        print(f"LangFuse tracing enabled. Base URL: {os.environ['LANGFUSE_BASE_URL']}")
     else:
         print("LangFuse tracing disabled")
     return
@@ -138,9 +136,7 @@ def _(os):
     langfuse_handler = None
     langfuse = None
 
-    if os.environ.get("LANGFUSE_PUBLIC_KEY") and os.environ.get(
-        "LANGFUSE_SECRET_KEY"
-    ):
+    if os.environ.get("LANGFUSE_PUBLIC_KEY") and os.environ.get("LANGFUSE_SECRET_KEY"):
         from langfuse import get_client
         from langfuse.langchain import CallbackHandler
 
@@ -153,7 +149,8 @@ def _(os):
         print("LangFuse handler initialized!")
     else:
         print("LangFuse handler disabled - skipping initialization")
-    return (langfuse_handler,)
+
+    return langfuse, langfuse_handler
 
 
 @app.cell(hide_code=True)
@@ -218,7 +215,7 @@ def _():
 
     # Chain them together with LCEL
     pirate_chain = prompt | model | output_parser
-    return ChatOpenAI, pirate_chain
+    return (pirate_chain,)
 
 
 @app.cell
@@ -229,7 +226,7 @@ def _(langfuse_handler, pirate_chain):
         {"question": "What is the capital of France?"}, config=config
     )
     print(response)
-    return (config,)
+    return
 
 
 @app.cell(hide_code=True)
@@ -299,7 +296,6 @@ def _(mo):
 def _():
     from langchain_core.tools import tool
 
-
     @tool
     def calculate(expression: str) -> str:
         """Evaluate a mathematical expression. Use this for any math calculations.
@@ -314,14 +310,12 @@ def _():
         except Exception as e:
             return f"Error evaluating expression: {e}"
 
-
     @tool
     def get_current_time() -> str:
         """Get the current date and time. Use this when the user asks about the current time or date."""
         from datetime import datetime
 
         return f"The current date and time is: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-
 
     # Create our tool belt
     tools = [calculate, get_current_time]
@@ -346,8 +340,9 @@ def _(mo):
 
 
 @app.cell
-def _(ChatOpenAI, tools):
+def _(tools):
     from langchain.agents import create_agent
+    from langchain_openai import ChatOpenAI
 
     # Create the model with local endpoint
     local_model = ChatOpenAI(
@@ -365,7 +360,7 @@ def _(ChatOpenAI, tools):
 
     print("Agent created successfully!")
     print(f"Type: {type(simple_agent)}")
-    return create_agent, local_model, simple_agent
+    return create_agent, simple_agent
 
 
 @app.cell(hide_code=True)
@@ -379,11 +374,11 @@ def _(mo):
 
 
 @app.cell
-def _(config, simple_agent):
+def _(langfuse_handler, simple_agent):
     # Test the agent with a simple calculation (with LangFuse tracing if enabled)
+    config = {"callbacks": [langfuse_handler]} if langfuse_handler else {}
     response_1 = simple_agent.invoke(
-        {"messages": [{"role": "user", "content": "What is 25 * 48?"}]},
-        config=config,
+        {"messages": [{"role": "user", "content": "What is 25 * 48?"}]}, config=config
     )
     print("Agent Response:")
     # Print the final response
@@ -392,8 +387,9 @@ def _(config, simple_agent):
 
 
 @app.cell
-def _(config, simple_agent):
+def _(langfuse_handler, simple_agent):
     # Test with a multi-step question that requires multiple tool calls (with LangFuse tracing if enabled)
+    config = {"callbacks": [langfuse_handler]} if langfuse_handler else {}
     response_2 = simple_agent.invoke(
         {
             "messages": [
@@ -459,7 +455,7 @@ def _(mo):
     In the agent loop, what determines whether the agent continues to call tools or returns a final answer to the user? How does `create_agent` handle this decision internally?
 
     ##### ✅ Answer:
-    The LLM decides - shockingly, that's literally the whole point of an agent. When the model outputs tool calls (structured JSON saying "use this tool"), the loop continues. When it outputs plain text (no tool calls), we're done. `create_agent` (built on LangGraph) simply checks the model response: if `tool_calls` is non-empty, execute tools and loop; otherwise, return the content. It's not magic, it's just conditional logic. The agent keeps going until the LLM gets bored enough to actually answer the question.
+    *Your answer here*
     """)
     return
 
@@ -467,14 +463,12 @@ def _(mo):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    mo.md(r"\"\"
     ## ❓ Question #2:
 
     Looking at the `calculate` and `get_current_time` tools we created, why is the **docstring** so important for each tool? How does the agent use this information when deciding which tool to call?
 
     ##### ✅ Answer:
-    The docstring is literally the only thing the LLM sees about your tool. When you pass tools to `create_agent`, LangChain wraps them up into a fancy schema and feeds the docstring straight to the model as the "description." The model reads these descriptions like a menu and picks what to order. That's why `calculate's` docstring says "use this for math calculations" - so the LLM actually knows it's for math, not, say, quantum physics. Bad docstring? Bad tool decisions. It's not telepathy, it's text matching.
-    "\"\")
+    *Your answer here*
     """)
     return
 
@@ -502,84 +496,21 @@ def _(mo):
 
 @app.cell
 def _(tool):
-    import requests
+    ### YOUR CODE HERE ###
 
-
+    # Create your custom tool
     @tool
-    def searxng_web_search(query: str) -> str:
-        """Search the internet for any information using the SearXNG search endpoint.
+    def my_custom_tool():
+        """Your tool description here - be clear about what it does!"""
+        pass
 
-        Use this tool when you need to find current information, recent news,
-        or any data that might not be in your training knowledge base.
-
-        Args:
-            query: The search query to search for on the internet
-
-        Returns:
-            A formatted string with search results including titles, URLs, and snippets
-        """
-        search_url = "http://192.168.1.36:4000/search"
-        params = {"q": query, "format": "json"}
-
-        try:
-            response = requests.get(search_url, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-
-            if not data.get("results"):
-                return f"No search results found for query: {query}"
-
-            formatted_results = []
-            for i, result in enumerate(data["results"][:10], 1):
-                formatted_results.append(f"{i}. {result.get('title', 'No title')}")
-                formatted_results.append(f"   URL: {result.get('url', 'No URL')}")
-                formatted_results.append(
-                    f"   Snippet: {result.get('content', 'No snippet')[:200]}"
-                )
-                formatted_results.append("")
-
-            return f"Search results for '{query}':\n\n" + "\n".join(
-                formatted_results
-            )
-
-        except requests.exceptions.Timeout:
-            return "Search request timed out. Please try again."
-        except requests.exceptions.RequestException as e:
-            return f"Error performing search: {str(e)}"
-        except Exception as e:
-            return f"Unexpected error during search: {str(e)}"
-    return (searxng_web_search,)
+    # Add your tool to the tools list and create a new agent
+    return
 
 
 @app.cell
-def _(
-    calculate,
-    call_limiter,
-    config,
-    create_agent,
-    get_current_time,
-    local_model,
-    log_after_model,
-    log_before_model,
-    search_wellness_knowledge,
-    searxng_web_search,
-):
-    enhanced_tools = [search_wellness_knowledge, calculate, get_current_time, searxng_web_search]
-
-    enhanced_agent = create_agent(
-        model=local_model,
-        tools=enhanced_tools,
-        system_prompt="You are a helpful wellness assistant with access to a health and wellness knowledge base and internet search.\n\nYour role is to:\n1. Answer questions about health, fitness, nutrition, sleep, and mental wellness\n2. Search the wellness knowledge base for wellness-related questions\n3. Use web search for current information beyond the knowledge base\n4. Perform calculations when needed\n5. Provide accurate, helpful information\n6. Be supportive and encouraging in your responses",
-        middleware=[log_before_model, log_after_model, call_limiter],
-    )
-
-    test_response = enhanced_agent.invoke(
-        {"messages": [{"role": "user", "content": "What are the latest health trends for 2026?"}]},
-        config=config,
-    )
-
-    print("=" * 50)
-    print(test_response["messages"][-1].content)
+def _():
+    # Test your custom tool with the agent
     return
 
 
@@ -665,35 +596,14 @@ def _():
     from qdrant_client import QdrantClient
     from qdrant_client.http.models import Distance, VectorParams
 
-    from openai import OpenAI
-
-
-    class LMStudioEmbeddings(OpenAIEmbeddings):
-        def __init__(self, **kwargs):
-            super().__init__(**kwargs)
-            self._raw_client = OpenAI(
-                base_url="http://192.168.1.79:8080/v1",
-            )
-
-        def embed_documents(self, texts):
-            response = self._raw_client.embeddings.create(
-                model=self.model,
-                input=texts,  # RAW STRINGS
-            )
-            return [item.embedding for item in response.data]
-
-        def embed_query(self, text):
-            return self.embed_documents([text])[0]
-
     # Initialize the embedding model
-    embedding_model = LMStudioEmbeddings(
-        model="text-embedding-nomic-embed-text-v2-moe", 
+    embedding_model = OpenAIEmbeddings(
+        model="text-embedding-nomic-embed-text-v2-moe",
+        base_url="http://192.168.1.79:8080/v1",
     )
 
     # Get embedding dimension
-    sample_embedding = embedding_model.embed_query(
-        "test",
-    )
+    sample_embedding = embedding_model.embed_query("test")
     embedding_dim = len(sample_embedding)
     print(f"Embedding dimension: {embedding_dim}")
     return (
@@ -739,9 +649,7 @@ def _(
 
     # Create vector store
     vector_store = QdrantVectorStore(
-        client=qdrant_client,
-        collection_name=collection_name,
-        embedding=embedding_model,
+        client=qdrant_client, collection_name=collection_name, embedding=embedding_model
     )
 
     # Add documents to the vector store
@@ -799,7 +707,6 @@ def _(retriever, tool):
             formatted_results.append(f"[Source {i}]:\n{doc.page_content}")
         return "\n\n".join(formatted_results)
 
-
     print("Wellness knowledge base tool created!")
     return (search_wellness_knowledge,)
 
@@ -840,7 +747,6 @@ def _():
 
     call_count = {"value": 0}
 
-
     @before_model
     def log_before_model(state, runtime):
         """Called before each model invocation."""
@@ -851,20 +757,16 @@ def _():
         )
         return None
 
-
     @after_model
     def log_after_model(state, runtime):
         """Called after each model invocation."""
-        last_message = (
-            state.get("messages", [])[-1] if state.get("messages") else None
-        )
+        last_message = state.get("messages", [])[-1] if state.get("messages") else None
         if last_message:
             has_tool_calls = (
                 hasattr(last_message, "tool_calls") and last_message.tool_calls
             )
             print(f"[LOG] After model - Tool calls requested: {has_tool_calls}")
         return None
-
 
     print("Logging middleware created!")
     return log_after_model, log_before_model
@@ -904,11 +806,19 @@ def _(
     call_limiter,
     create_agent,
     get_current_time,
-    local_model,
     log_after_model,
     log_before_model,
     search_wellness_knowledge,
 ):
+    from langchain_openai import ChatOpenAI
+
+    # Create the model with local endpoint
+    local_model = ChatOpenAI(
+        model="openai/gpt-oss-120b",
+        base_url="http://192.168.1.79:8080/v1",
+        temperature=0.7,
+    )
+
     rag_tools = [search_wellness_knowledge, calculate, get_current_time]
     wellness_agent = create_agent(
         model=local_model,
@@ -921,11 +831,11 @@ def _(
 
 
 @app.cell
-def _(config, wellness_agent):
+def _(langfuse_handler, wellness_agent):
     # Test the wellness agent (with LangFuse tracing if enabled)
     print("Testing Wellness Agent")
     print("=" * 50)
-
+    config = {"callbacks": [langfuse_handler]} if langfuse_handler else {}
     response_3 = wellness_agent.invoke(
         {
             "messages": [
@@ -942,11 +852,11 @@ def _(config, wellness_agent):
 
 
 @app.cell
-def _(config, wellness_agent):
+def _(langfuse_handler, wellness_agent):
     # Test with a more complex query (with LangFuse tracing if enabled)
     print("Testing with complex query")
     print("=" * 50)
-
+    config = {"callbacks": [langfuse_handler]} if langfuse_handler else {}
     response_4 = wellness_agent.invoke(
         {
             "messages": [
@@ -966,14 +876,13 @@ def _(config, wellness_agent):
 
 
 @app.cell
-def _(config, wellness_agent):
+def _(langfuse_handler, wellness_agent):
     # Test the agent\'s ability to know when NOT to use RAG (with LangFuse tracing if enabled)
     print("Testing agent decision-making (should NOT use RAG)")
     print("=" * 50)
-
+    config = {"callbacks": [langfuse_handler]} if langfuse_handler else {}
     response_5 = wellness_agent.invoke(
-        {"messages": [{"role": "user", "content": "What is 125 * 8?"}]},
-        config=config,
+        {"messages": [{"role": "user", "content": "What is 125 * 8?"}]}, config=config
     )
     print("\\n" + "=" * 50)
     print("FINAL RESPONSE:")
@@ -1009,19 +918,13 @@ def _(wellness_agent):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    mo.md(r"\"\"
     ---
     ## ❓ Question #3:
 
     How does **Agentic RAG** differ from traditional RAG? What are the advantages and potential disadvantages of letting the agent decide when to retrieve information?
 
     ##### ✅ Answer:
-    Traditional RAG is like a vending machine - you put in a query, it spits out retrieved docs every single time, no thinking required. Agentic RAG gives the LLM the steering wheel - it decides whether to retrieve, retrieve multiple times, or skip it entirely and just answer from its own training data.
-
-    Pros: You don't waste tokens retrieving for "What is 2+2?" or "Tell me a joke." The agent can reason through multi-step questions, retrieving only when actually needed. It's smarter, more flexible, and your wallet will thank you for those saved API calls.
-
-    Cons: It's slower (extra model calls = more latency), more expensive (decision-making isn't free), and the agent might confidently decide not to retrieve when it absolutely should. Plus, debugging "why didn't it fetch anything?" is way more fun than you'd think.
-    "\"\")
+    *Your answer here*
     """)
     return
 
@@ -1034,7 +937,7 @@ def _(mo):
     Looking at the middleware examples (`log_before_model`, `log_after_model`, and `ModelCallLimitMiddleware`), describe a real-world scenario where middleware would be essential for a production agent. What specific middleware hooks would you use and why?
 
     ##### ✅ Answer:
-    Imagine a banking chatbot deployed at scale - you can't just "hope it doesn't leak customer data." Middleware is the only thing standing between me and getting so so so fired. I'd use `before_model` to scrub PII from inputs (compliance isn't optional), `after_model` to verify no sensitive info slips through in outputs, and `ModelCallLimitMiddleware` to keep API costs from spiraling when a user asks "explain everything" in 30 different ways. Without middleware, you're essentially trusting a hallucinations-prone AI with legal liability.
+    *Your answer here*
     """)
     return
 
@@ -1085,6 +988,7 @@ def _():
 @app.cell
 def _():
     import marimo as mo
+
     return (mo,)
 
 
