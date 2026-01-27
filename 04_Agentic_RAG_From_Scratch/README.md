@@ -9,7 +9,7 @@
 
 | Session Sheet | Recording     | Slides        | Repo         | Homework      | Feedback       |
 |:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|
-|[Agentic RAG From Scratch](https://github.com/AI-Maker-Space/AIE9/blob/main/00_Docs/Session_Sheets/04_Agentic_RAG_From_Scratch.md) | Coming soon! | Coming soon! | You are here! | Coming soon! | Coming soon! |
+| [Vibe Check!](../00_Docs/Session_Sheets/04_Agentic_RAG_From_Scratch.md) |[Recording!](https://us02web.zoom.us/rec/share/HY0f8Ovri36rF9lRYPs-I1qckTkEftcuxg0zUXmLSI9_tCxJQxXYgPXejzMxYbuC.nJypOGHZUaPBaVZd) <br> passcode: `02y.=1pO`| [Session 4 Slides](https://www.canva.com/design/DAG-EIVcUxE/WH_2fNB39mBUmOb-zeB8WA/edit?utm_content=DAG-EIVcUxE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | You are here! | [Session 4 Assignment: Agentic RAG](https://forms.gle/wJWWTyQXhveVLaKx8) | [Feedback 1/22](https://forms.gle/dTuPZjRVnUMQy5x76) |
 
 
 ### Outline:
