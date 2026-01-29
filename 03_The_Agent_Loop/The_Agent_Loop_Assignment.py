@@ -83,7 +83,7 @@ def _():
     import nest_asyncio
 
     nest_asyncio.apply()  # Required for async operations in Jupyter
-    return getpass, os, uuid4
+    return getpass, os
 
 
 @app.cell(hide_code=True)
@@ -106,17 +106,13 @@ def _(getpass, os):
 
 
 @app.cell
-def _(getpass, os, uuid4):
+def _(os):
     # Set up LangFuse for tracing (self-hosted, open source)
     # This provides powerful debugging and observability for your agents
     # Note: LangFuse server needs to be running at the specified URL
 
-    os.environ["LANGFUSE_PUBLIC_KEY"] = (
-        getpass.getpass("LangFuse Public Key (or press Enter to skip): ") or ""
-    )
-    os.environ["LANGFUSE_SECRET_KEY"] = (
-        getpass.getpass("LangFuse Secret Key (or press Enter to skip): ") or ""
-    )
+    os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-lf-b76a11bf-0d3e-4b42-981d-aef04ac7ac80"
+    os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-31d5642a-6af9-436a-a2aa-a3ab1b310995"
 
     if os.environ["LANGFUSE_PUBLIC_KEY"] and os.environ["LANGFUSE_SECRET_KEY"]:
         os.environ["LANGFUSE_BASE_URL"] = os.environ.get(
@@ -149,8 +145,7 @@ def _(os):
         print("LangFuse handler initialized!")
     else:
         print("LangFuse handler disabled - skipping initialization")
-
-    return langfuse, langfuse_handler
+    return (langfuse_handler,)
 
 
 @app.cell(hide_code=True)
@@ -215,7 +210,7 @@ def _():
 
     # Chain them together with LCEL
     pirate_chain = prompt | model | output_parser
-    return (pirate_chain,)
+    return ChatOpenAI, pirate_chain
 
 
 @app.cell
@@ -340,11 +335,9 @@ def _(mo):
 
 
 @app.cell
-def _(tools):
+def _(ChatOpenAI, tools):
     from langchain.agents import create_agent
-    from langchain_openai import ChatOpenAI
 
-    # Create the model with local endpoint
     local_model = ChatOpenAI(
         model="openai/gpt-oss-120b",
         base_url="http://192.168.1.79:8080/v1",
@@ -360,7 +353,7 @@ def _(tools):
 
     print("Agent created successfully!")
     print(f"Type: {type(simple_agent)}")
-    return create_agent, simple_agent
+    return create_agent, local_model, simple_agent
 
 
 @app.cell(hide_code=True)
@@ -376,9 +369,9 @@ def _(mo):
 @app.cell
 def _(langfuse_handler, simple_agent):
     # Test the agent with a simple calculation (with LangFuse tracing if enabled)
-    config = {"callbacks": [langfuse_handler]} if langfuse_handler else {}
     response_1 = simple_agent.invoke(
-        {"messages": [{"role": "user", "content": "What is 25 * 48?"}]}, config=config
+        {"messages": [{"role": "user", "content": "What is 25 * 48?"}]},
+        config={"callbacks": [langfuse_handler]} if langfuse_handler else {},
     )
     print("Agent Response:")
     # Print the final response
@@ -389,7 +382,6 @@ def _(langfuse_handler, simple_agent):
 @app.cell
 def _(langfuse_handler, simple_agent):
     # Test with a multi-step question that requires multiple tool calls (with LangFuse tracing if enabled)
-    config = {"callbacks": [langfuse_handler]} if langfuse_handler else {}
     response_2 = simple_agent.invoke(
         {
             "messages": [
@@ -399,7 +391,7 @@ def _(langfuse_handler, simple_agent):
                 }
             ]
         },
-        config=config,
+        config={"callbacks": [langfuse_handler]} if langfuse_handler else {},
     )
     print("Agent Response:")
     print(response_2["messages"][-1].content)
@@ -455,7 +447,7 @@ def _(mo):
     In the agent loop, what determines whether the agent continues to call tools or returns a final answer to the user? How does `create_agent` handle this decision internally?
 
     ##### ✅ Answer:
-    *Your answer here*
+    *The LLM decides whether to call tools or return a final answer based on the current conversation state. `create_agent` handles this using LangGraph, which repeatedly calls the model and checks its output for tool calls—if there are any, it executes them and loops back; if not, it returns the final response.*
     """)
     return
 
@@ -468,7 +460,7 @@ def _(mo):
     Looking at the `calculate` and `get_current_time` tools we created, why is the **docstring** so important for each tool? How does the agent use this information when deciding which tool to call?
 
     ##### ✅ Answer:
-    *Your answer here*
+    *The docstring describes what each tool does and when to use it. The agent reads these descriptions to match the user's request with the right tool.*
     """)
     return
 
@@ -495,22 +487,69 @@ def _(mo):
 
 
 @app.cell
-def _(tool):
+def _(create_agent, local_model, tool):
     ### YOUR CODE HERE ###
 
     # Create your custom tool
+    from langchain_community.utilities import SearxSearchWrapper
+
     @tool
-    def my_custom_tool():
-        """Your tool description here - be clear about what it does!"""
-        pass
+    def my_custom_tool(query: str) -> str:
+        """Search the web using SearxNG meta search engine. Use this tool when you need to find current information, answer questions about recent events, or look up facts that may not be in your training data.
+
+        Args:
+            query: The search query to look up on the web
+        """
+        try:
+            searx = SearxSearchWrapper(searx_host="http://192.168.1.36:4000", k=5)
+            results = searx.results(query, num_results=5)
+
+            if not results:
+                return f"No search results found for query: {query}"
+
+            formatted_results = []
+            for i, result in enumerate(results[:5], 1):
+                title = result.get("title", "No title")
+                link = result.get("link", "No URL")
+                snippet = result.get("snippet", "No description available")
+                formatted_results.append(
+                    f"{i}. {title}\n   URL: {link}\n   Description: {snippet}"
+                )
+
+            return f"Search results for '{query}':\n\n" + "\n\n".join(formatted_results)
+        except Exception as e:
+            return f"Error performing web search: {str(e)}"
 
     # Add your tool to the tools list and create a new agent
-    return
+    web_search_tools = [my_custom_tool]
+
+    web_search_agent = create_agent(
+        model=local_model,
+        tools=web_search_tools,
+        system_prompt="You are a helpful assistant with web search capabilities. Use the web search tool to find current information and answer questions about recent events or topics that may require up-to-date data.",
+    )
+
+    print("Web Search Agent created successfully!")
+    return (web_search_agent,)
 
 
 @app.cell
-def _():
+def _(web_search_agent):
     # Test your custom tool with the agent
+    response_test = web_search_agent.invoke(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "What are the latest developments in AI?",
+                }
+            ]
+        },
+    )
+
+    print("Web Search Agent Response:")
+    print("=" * 50)
+    print(response_test["messages"][-1].content)
     return
 
 
@@ -600,6 +639,7 @@ def _():
     embedding_model = OpenAIEmbeddings(
         model="text-embedding-nomic-embed-text-v2-moe",
         base_url="http://192.168.1.79:8080/v1",
+        check_embedding_ctx_length=False,
     )
 
     # Get embedding dimension
@@ -644,18 +684,64 @@ def _(
     # Create the vector store and add documents
     from langchain_core.documents import Document
 
-    # Convert chunks to LangChain Document objects
-    langchain_docs = [Document(page_content=chunk) for chunk in chunks]
+    # Add metadata to documents for filtering
+    # We'll categorize chunks by content type and assign chunk indices
+    from typing import List, Tuple
+
+    langchain_docs = []
+    for idx, doc_chunk in enumerate(chunks):
+        # Determine category based on content
+        category = "general"
+        chunk_lower = doc_chunk.lower()
+
+        if any(
+            word in chunk_lower for word in ["sleep", "rest", "bedtime", "insomnia"]
+        ):
+            category = "sleep"
+        elif any(
+            word in chunk_lower
+            for word in ["exercise", "workout", "fitness", "training"]
+        ):
+            category = "fitness"
+        elif any(
+            word in chunk_lower
+            for word in ["nutrition", "diet", "food", "meal", "protein"]
+        ):
+            category = "nutrition"
+        elif any(
+            word in chunk_lower
+            for word in ["stress", "mental", "anxiety", "mindfulness", "meditation"]
+        ):
+            category = "mental_health"
+
+        doc_text = Document(
+            page_content=doc_chunk,
+            metadata={
+                "source": "HealthWellnessGuide.txt",
+                "chunk_id": idx,
+                "category": category,
+                "total_chunks": len(chunks),
+            },
+        )
+        langchain_docs.append(doc_text)
 
     # Create vector store
     vector_store = QdrantVectorStore(
-        client=qdrant_client, collection_name=collection_name, embedding=embedding_model
+        client=qdrant_client,
+        collection_name=collection_name,
+        embedding=embedding_model,
     )
 
     # Add documents to the vector store
     vector_store.add_documents(langchain_docs)
 
-    print(f"Added {len(langchain_docs)} documents to vector store")
+    print(f"Added {len(langchain_docs)} documents to vector store with metadata")
+
+    # Print category distribution
+    from collections import Counter
+
+    categories = [doc.metadata["category"] for doc in langchain_docs]
+    print(f"Document distribution: {dict(Counter(categories))}")
     return (vector_store,)
 
 
@@ -670,7 +756,7 @@ def _(vector_store):
     for i, doc in enumerate(test_results, 1):
         print(f"\n--- Document {i} ---")
         print(doc.page_content[:200] + "...")
-    return (retriever,)
+    return
 
 
 @app.cell(hide_code=True)
@@ -684,9 +770,13 @@ def _(mo):
 
 
 @app.cell
-def _(retriever, tool):
+def _(tool, vector_store):
+    from typing import Optional
+
     @tool
-    def search_wellness_knowledge(query: str) -> str:
+    def search_wellness_knowledge(
+        query: str, category_filter: Optional[str] = None
+    ) -> str:
         """Search the wellness knowledge base for information about health, fitness, nutrition, sleep, and mental wellness.
 
         Use this tool when the user asks questions about:
@@ -698,16 +788,63 @@ def _(retriever, tool):
 
         Args:
             query: The search query to find relevant wellness information
+            category_filter: Optional filter by category - use values like 'sleep', 'fitness', 'nutrition', or 'mental_health'
         """
-        results = retriever.invoke(query)
+
+        # Build metadata filter if category is specified
+        from qdrant_client.http import models as qdrant_models
+
+        search_kwargs = {"k": 3}
+        qdrant_filter = None
+
+        if category_filter:
+            # Map friendly names to metadata values
+            category_map = {
+                "sleep": "sleep",
+                "fitness": "fitness",
+                "nutrition": "nutrition",
+                "mental health": "mental_health",
+                "mental_health": "mental_health",
+            }
+
+            mapped_category = category_map.get(category_filter.lower())
+            if mapped_category:
+                qdrant_filter = qdrant_models.Filter(
+                    must=[
+                        qdrant_models.FieldCondition(
+                            key="metadata.category",
+                            match=qdrant_models.MatchValue(value=mapped_category),
+                        )
+                    ]
+                )
+
+        # Use similarity_search_with_relevance_scores to get documents with scores
+        if qdrant_filter:
+            results = vector_store.similarity_search_with_relevance_scores(
+                query, k=3, filter=qdrant_filter
+            )
+        else:
+            results = vector_store.similarity_search_with_relevance_scores(query, k=3)
+
         if not results:
             return "No relevant information found in the wellness knowledge base."
-        formatted_results = []
-        for i, doc in enumerate(results, 1):
-            formatted_results.append(f"[Source {i}]:\n{doc.page_content}")
-        return "\n\n".join(formatted_results)
 
-    print("Wellness knowledge base tool created!")
+        # Sort by relevance score (highest first) for reranking
+        results.sort(key=lambda x: x[1], reverse=True)
+
+        # Format with source citations and relevance scores
+        formatted_results = []
+        for i, (doc, score) in enumerate(results, 1):
+            source = doc.metadata.get("source", "Unknown")
+            chunk_id = doc.metadata.get("chunk_id", "?")
+            category = doc.metadata.get("category", "general")
+
+            formatted_results.append(
+                f"[Source {i} - Relevance: {score:.2%}] (Category: {category}, Source: {source}#{chunk_id}):\n"
+                f"{doc.page_content}"
+            )
+
+        return "\n\n".join(formatted_results)
     return (search_wellness_knowledge,)
 
 
@@ -806,20 +943,13 @@ def _(
     call_limiter,
     create_agent,
     get_current_time,
+    local_model,
     log_after_model,
     log_before_model,
     search_wellness_knowledge,
 ):
-    from langchain_openai import ChatOpenAI
-
-    # Create the model with local endpoint
-    local_model = ChatOpenAI(
-        model="openai/gpt-oss-120b",
-        base_url="http://192.168.1.79:8080/v1",
-        temperature=0.7,
-    )
-
     rag_tools = [search_wellness_knowledge, calculate, get_current_time]
+
     wellness_agent = create_agent(
         model=local_model,
         tools=rag_tools,
@@ -835,14 +965,14 @@ def _(langfuse_handler, wellness_agent):
     # Test the wellness agent (with LangFuse tracing if enabled)
     print("Testing Wellness Agent")
     print("=" * 50)
-    config = {"callbacks": [langfuse_handler]} if langfuse_handler else {}
+
     response_3 = wellness_agent.invoke(
         {
             "messages": [
                 {"role": "user", "content": "What are some tips for better sleep?"}
             ]
         },
-        config=config,
+        config={"callbacks": [langfuse_handler]} if langfuse_handler else {},
     )
     print("\\n" + "=" * 50)
     print("FINAL RESPONSE:")
@@ -856,7 +986,6 @@ def _(langfuse_handler, wellness_agent):
     # Test with a more complex query (with LangFuse tracing if enabled)
     print("Testing with complex query")
     print("=" * 50)
-    config = {"callbacks": [langfuse_handler]} if langfuse_handler else {}
     response_4 = wellness_agent.invoke(
         {
             "messages": [
@@ -866,7 +995,7 @@ def _(langfuse_handler, wellness_agent):
                 }
             ]
         },
-        config=config,
+        config={"callbacks": [langfuse_handler]} if langfuse_handler else {},
     )
     print("\\n" + "=" * 50)
     print("FINAL RESPONSE:")
@@ -880,9 +1009,9 @@ def _(langfuse_handler, wellness_agent):
     # Test the agent\'s ability to know when NOT to use RAG (with LangFuse tracing if enabled)
     print("Testing agent decision-making (should NOT use RAG)")
     print("=" * 50)
-    config = {"callbacks": [langfuse_handler]} if langfuse_handler else {}
     response_5 = wellness_agent.invoke(
-        {"messages": [{"role": "user", "content": "What is 125 * 8?"}]}, config=config
+        {"messages": [{"role": "user", "content": "What is 125 * 8?"}]},
+        config={"callbacks": [langfuse_handler]} if langfuse_handler else {},
     )
     print("\\n" + "=" * 50)
     print("FINAL RESPONSE:")
@@ -924,7 +1053,7 @@ def _(mo):
     How does **Agentic RAG** differ from traditional RAG? What are the advantages and potential disadvantages of letting the agent decide when to retrieve information?
 
     ##### ✅ Answer:
-    *Your answer here*
+    *Traditional RAG always retrieves before answering, while Agentic RAG lets the agent choose when to retrieve based on what it needs. The advantage is skipping unnecessary retrievals for simple questions, but the downside is the agent might sometimes miss retrieving important information it actually needs.*
     """)
     return
 
@@ -937,7 +1066,7 @@ def _(mo):
     Looking at the middleware examples (`log_before_model`, `log_after_model`, and `ModelCallLimitMiddleware`), describe a real-world scenario where middleware would be essential for a production agent. What specific middleware hooks would you use and why?
 
     ##### ✅ Answer:
-    *Your answer here*
+    *A customer service bot would need `before_model` to log user IDs for tracking, `after_model` to capture token usage for billing, and `ModelCallLimitMiddleware` to stop users from spamming the system with too many requests.*
     """)
     return
 
@@ -972,23 +1101,92 @@ def _(mo):
 
 
 @app.cell
-def _():
-    ### YOUR CODE HERE ###
+def _(
+    calculate,
+    call_limiter,
+    create_agent,
+    get_current_time,
+    local_model,
+    log_after_model,
+    log_before_model,
+    search_wellness_knowledge,
+):
+    ### OPTION C: Improve the RAG Tool ###
 
-    # Implement your enhancement below
-    return
+    enhanced_rag_tools = [search_wellness_knowledge, calculate, get_current_time]
+
+    enhanced_wellness_agent = create_agent(
+        model=local_model,
+        tools=enhanced_rag_tools,
+        system_prompt="You are a helpful wellness assistant with access to a comprehensive health and wellness knowledge base.\n\nYour role is to:\n1. Answer questions about health, fitness, nutrition, sleep, and mental wellness\n2. Always search the knowledge base when the user asks wellness-related questions\n3. You can optionally filter searches by category: 'sleep', 'fitness', 'nutrition', or 'mental_health'\n4. The search tool provides results with relevance scores and source citations\n5. Provide accurate, helpful information based on the retrieved context\n6. Be supportive and encouraging in your responses\n7. If you cannot find relevant information, say so honestly",
+        middleware=[log_before_model, log_after_model, call_limiter],
+    )
+    return (enhanced_wellness_agent,)
 
 
 @app.cell
-def _():
+def _(enhanced_wellness_agent, langfuse_handler):
     # Test your enhanced agent here
+
+    print("=" * 70)
+    print("TEST 1: Basic Search with Relevance Scores and Citations")
+    print("=" * 70)
+
+    response_test1 = enhanced_wellness_agent.invoke(
+        {
+            "messages": [
+                {"role": "user", "content": "I'm feeling stressed. How can I manage stress better?"}
+            ]
+        },
+        config={"callbacks": [langfuse_handler]} if langfuse_handler else {},
+    )
+
+    print("\nAgent Response:")
+    print(response_test1["messages"][-1].content)
+
+    print("\n" + "=" * 70)
+    print("TEST 2: Search with Metadata Filtering (Category: Nutrition)")
+    print("=" * 70)
+
+    response_test2 = enhanced_wellness_agent.invoke(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "I'm feeling stressed. How can I manage stress better? Please search using the nutrition category filter.",
+                }
+            ]
+        },
+        config={"callbacks": [langfuse_handler]} if langfuse_handler else {},
+    )
+
+    print("\nAgent Response:")
+    print(response_test2["messages"][-1].content)
+
+    print("\n" + "=" * 70)
+    print("TEST 3: Search with Metadata Filtering (Category: Mental Health)")
+    print("=" * 70)
+
+    response_test3 = enhanced_wellness_agent.invoke(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "I'm feeling stressed. How can I manage stress better? Please use the mental health category filter.",
+                }
+            ]
+        },
+        config={"callbacks": [langfuse_handler]} if langfuse_handler else {},
+    )
+
+    print("\nAgent Response:")
+    print(response_test3["messages"][-1].content)
     return
 
 
 @app.cell
 def _():
     import marimo as mo
-
     return (mo,)
 
 
