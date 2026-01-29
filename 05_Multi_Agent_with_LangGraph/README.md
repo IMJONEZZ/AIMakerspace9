@@ -9,7 +9,7 @@
 
 | Session Sheet | Recording     | Slides        | Repo         | Homework      | Feedback       |
 |:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|
-|[Multi-Agent Applications](https://github.com/AI-Maker-Space/AIE9/blob/main/00_Docs/Session_Sheets/05_Multi-Agent_Applications.md) | Coming soon! | Coming soon! | You are here! | Coming soon! | Coming soon! |
+| [Multi-Agent Applications](../00_Docs/Session_Sheets/05_Multi-Agent_Applications.md) |[Recording!](https://us02web.zoom.us/rec/share/jwQXJvfXHDqnHrdYbM3N4IIdC11RjrTt7SdONULHt5dEl1Yewt5yq8RkdUmh6SN2.6yBYiaF50OXCloq-) <br> passcode: `Ka!v5.@#`| [Session 5 Slides](https://www.canva.com/design/DAG-EKkrXTw/jbDOFE4UMTVTNNUOFylBpA/edit?utm_content=DAG-EKkrXTw&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | You are here! | [Session 5 Assignment: Multi Agents](https://forms.gle/5E9uamcVXHCdqRek6) | [Feedback 1/27](https://forms.gle/Cj2YXREqaRaJ66y36) |
 
 
 ### Outline:
