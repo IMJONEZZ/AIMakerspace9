@@ -4,3 +4,8 @@ content/
 .claude/
 
 */The-AI-Engineer-Challenge/*
+__pycache__/
+*.pyc
+.langgraph_api/
+.venv
+uv.lock
