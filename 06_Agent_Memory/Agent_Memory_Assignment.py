@@ -87,7 +87,7 @@ def _():
     import nest_asyncio
 
     nest_asyncio.apply()  # Required for async operations in Jupyter
-    return Annotated, TypedDict, getpass, os, uuid4
+    return Annotated, TypedDict, getpass, os
 
 
 @app.cell
@@ -98,12 +98,10 @@ def _(getpass, os):
 
 
 @app.cell
-def _(getpass, os):
+def _(os):
     # Langfuse for tracing (local docker instance)
-    os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-lf-"
-    os.environ["LANGFUSE_SECRET_KEY"] = (
-        getpass.getpass("Langfuse Secret Key (press Enter to skip): ") or ""
-    )
+    os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-lf-b76a11bf-0d3e-4b42-981d-aef04ac7ac80"
+    os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-31d5642a-6af9-436a-a2aa-a3ab1b310995"
     os.environ["LANGFUSE_HOST"] = "http://localhost:3000"
 
     if not os.environ["LANGFUSE_SECRET_KEY"]:
@@ -657,7 +655,21 @@ def _(mo):
 
 
 @app.cell
-def _():
+def _(
+    Annotated,
+    BaseStore,
+    END,
+    HumanMessage,
+    MemorySaver,
+    RunnableConfig,
+    START,
+    StateGraph,
+    SystemMessage,
+    TypedDict,
+    add_messages,
+    llm,
+    store,
+):
     ### YOUR CODE HERE ###
 
     # Step 1: Define a wellness profile schema
@@ -666,18 +678,109 @@ def _():
     # Step 2: Create helper functions to store and retrieve profiles
     def store_wellness_profile(store, user_id: str, profile: dict):
         """Store a user's wellness profile."""
-        pass
+        namespace = (user_id, "wellness_profile")
+        for key, value in profile.items():
+            store.put(namespace, key, {"value": value})
 
     def get_wellness_profile(store, user_id: str) -> dict:
         """Retrieve a user's wellness profile."""
-        pass
+        namespace = (user_id, "wellness_profile")
+        profile_items = list(store.search(namespace))
+        return {item.key: item.value["value"] for item in profile_items}
 
     # Step 3: Create two different user profiles
+    alice_profile = {
+        "name": "Alice",
+        "age": 28,
+        "goals": ["lose weight", "improve cardiovascular health"],
+        "conditions": ["asthma"],
+        "allergies": ["shellfish", "dairy"],
+        "fitness_level": "beginner",
+    }
+
+    bob_profile = {
+        "name": "Bob",
+        "age": 45,
+        "goals": ["build muscle", "reduce stress"],
+        "conditions": ["high blood pressure"],
+        "allergies": ["nuts", "gluten"],
+        "fitness_level": "intermediate",
+    }
+
+    store_wellness_profile(store, "user_alice", alice_profile)
+    store_wellness_profile(store, "user_bob", bob_profile)
+
+    print("Stored Alice's and Bob's wellness profiles")
 
     # Step 4: Build a personalized agent that uses profiles
+    class ProfileState(TypedDict):
+        messages: Annotated[list, add_messages]
+        user_id: str
+
+    def profile_wellness_assistant(
+        state: ProfileState, config: RunnableConfig, *, store: BaseStore
+    ):
+        """A wellness assistant that uses user profiles for personalization."""
+        user_id = state["user_id"]
+        profile = get_wellness_profile(store, user_id)
+
+        if profile:
+            profile_text = "\n".join([f"- {k}: {v}" for k, v in profile.items()])
+            system_msg = f"You are a Personal Wellness Assistant. You know the following about this user:\n\n{profile_text}\n\nUse this information to personalize your responses. Be supportive and helpful."
+        else:
+            system_msg = (
+                "You are a Personal Wellness Assistant. Be supportive and helpful."
+            )
+
+        messages = [SystemMessage(content=system_msg)] + state["messages"]
+        response = llm.invoke(messages)
+        return {"messages": [response]}
+
+    builder = StateGraph(ProfileState)
+    builder.add_node("chatbot", profile_wellness_assistant)
+    builder.add_edge(START, "chatbot")
+    builder.add_edge("chatbot", END)
+    profile_graph = builder.compile(checkpointer=MemorySaver(), store=store)
+
+    print("Personalized wellness agent built with profile support")
 
     # Step 5: Test with different users - they should get different advice
-    return
+    alice_config = {"configurable": {"thread_id": "alice_test_thread"}}
+    bob_config = {"configurable": {"thread_id": "bob_test_thread"}}
+
+    alice_response = profile_graph.invoke(
+        {
+            "messages": [
+                HumanMessage(content="What exercises do you recommend for me?")
+            ],
+            "user_id": "user_alice",
+        },
+        alice_config,
+    )
+
+    print("\n=== Alice's Response ===")
+    print(
+        f"User (Alice, beginner with asthma): What exercises do you recommend for me?"
+    )
+    print(f"Assistant: {alice_response['messages'][-1].content}")
+
+    bob_response = profile_graph.invoke(
+        {
+            "messages": [
+                HumanMessage(content="What exercises do you recommend for me?")
+            ],
+            "user_id": "user_bob",
+        },
+        bob_config,
+    )
+
+    print("\n=== Bob's Response ===")
+    print(
+        f"User (Bob, intermediate with high blood pressure): What exercises do you recommend for me?"
+    )
+    print(f"Assistant: {bob_response['messages'][-1].content}")
+
+    return (profile_graph,)
 
 
 @app.cell(hide_code=True)
@@ -1483,7 +1586,7 @@ def _(mo):
 
 
 @app.cell
-def _():
+def _(semantic_store):
     ### YOUR CODE HERE ###
 
     # Step 1: Define wellness metrics schema and storage functions
@@ -1496,15 +1599,35 @@ def _():
         notes: str = "",
     ):
         """Log a wellness metric for a user."""
-        pass
+        namespace = (user_id, "metrics")
+        key = f"{date}_{metric_type}"
+        store.put(namespace, key, {"value": value, "notes": notes, "date": date})
 
     def get_wellness_history(
         store, user_id: str, metric_type: str = None, days: int = 7
     ) -> list:
         """Get wellness history for a user."""
-        pass
+        namespace = (user_id, "metrics")
+        all_metrics = list(store.search(namespace))
+        if metric_type:
+            filtered = [m for m in all_metrics if metric_type in m.key]
+        else:
+            filtered = all_metrics
+        sorted_metrics = sorted(filtered, key=lambda x: x.key, reverse=True)
+        return sorted_metrics[:days]
 
     # Step 2: Create sample wellness data for a user (simulate a week)
+    test_user = "user_dashboard_test"
+    dates = ["Day1", "Day2", "Day3", "Day4", "Day5"]
+    for i, day in enumerate(dates):
+        log_wellness_metric(
+            semantic_store, test_user, day, "mood", 6 + i * 0.5 if i < 4 else 5
+        )
+        log_wellness_metric(semantic_store, test_user, day, "energy", 5 + (i % 3))
+        log_wellness_metric(
+            semantic_store, test_user, day, "sleep_quality", 7 - (i % 2)
+        )
+    print("Sample wellness data created for test user")
 
     # Step 3: Build a wellness dashboard agent that:
     #   - Retrieves user's wellness history
@@ -1512,9 +1635,51 @@ def _():
     #   - Uses episodic memory for what worked before
     #   - Generates a personalized summary
 
+    def generate_wellness_summary(store, user_id: str) -> dict:
+        """Generate a summary of wellness metrics."""
+        history = get_wellness_history(store, user_id, days=7)
+        mood_vals = [m.value["value"] for m in history if "mood" in m.key]
+        energy_vals = [m.value["value"] for m in history if "energy" in m.key]
+        sleep_vals = [m.value["value"] for m in history if "sleep" in m.key]
+        summary = {
+            "avg_mood": sum(mood_vals) / len(mood_vals) if mood_vals else 0,
+            "avg_energy": sum(energy_vals) / len(energy_vals) if energy_vals else 0,
+            "avg_sleep": sum(sleep_vals) / len(sleep_vals) if sleep_vals else 0,
+            "trend": "improving"
+            if mood_vals and mood_vals[0] > mood_vals[-1]
+            else "stable",
+        }
+        return summary
+
+    def wellness_dashboard(store, user_id: str, query: str) -> str:
+        """Main dashboard function."""
+        summary = generate_wellness_summary(store, user_id)
+        relevant_advice = store.search(("wellness", "facts"), query=query, limit=2)
+        similar_episodes = store.search(("agent", "episodes"), query=query, limit=1)
+
+        response = f"Wellness Summary for {user_id}:\n"
+        response += f"- Average Mood: {summary['avg_mood']:.1f}/10\n"
+        response += f"- Average Energy: {summary['avg_energy']:.1f}/10\n"
+        response += f"- Average Sleep: {summary['avg_sleep']:.1f}/10\n"
+        response += f"- Trend: {summary['trend']}\n"
+
+        if relevant_advice:
+            response += f"\nRelevant Advice:\n{relevant_advice[0].value['text']}"
+
+        return response
+
     # Step 4: Test the dashboard
-    # Example: "Give me a summary of my wellness this week"
-    # Example: "I've been feeling tired lately. What might help?"
+    print("\n" + "=" * 50)
+    print("Test 1: Weekly Summary")
+    print("=" * 50)
+    print(wellness_dashboard(semantic_store, test_user, "give me a summary"))
+
+    print("\n" + "=" * 50)
+    print("Test 2: Tiredness Query")
+    print("=" * 50)
+    print(
+        wellness_dashboard(semantic_store, test_user, "I've been feeling tired lately")
+    )
     return
 
 
