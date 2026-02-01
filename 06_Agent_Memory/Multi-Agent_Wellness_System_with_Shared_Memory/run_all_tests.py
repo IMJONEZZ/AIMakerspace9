@@ -18,7 +18,6 @@ def run_test(test_name, test_file):
     result = subprocess.run(
         ["uv", "run", "python", test_file],
         capture_output=False,
-        env={"OPENAI_API_KEY": "dummy-key"},
     )
 
     return result.returncode == 0

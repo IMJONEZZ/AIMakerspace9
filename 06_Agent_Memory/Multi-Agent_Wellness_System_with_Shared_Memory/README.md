@@ -180,19 +180,27 @@ Multi-Agent_Wellness_System_with_Shared_Memory/
 
 ## Configuration
 
+The system uses a local OpenAI-compatible model server by default:
+
+**Default Local Model Server**: `http://192.168.1.79:8080/v1/`
+- **LLM Model**: `openai/gpt-oss-120b` (for agent responses)
+- **Embedding Model**: `text-embedding-nomic-embed-text-v2-moe` (for semantic search)
+
 Environment variables (optional, uses defaults):
 
 ```bash
-# LLM endpoint configuration
-OPENAI_API_KEY=dummy-key-for-local-endpoint
+# LLM endpoint configuration (uses local server by default)
 OPENAI_BASE_URL=http://192.168.1.79:8080/v1/
 OPENAI_MODEL=openai/gpt-oss-120b
+# OPENAI_API_KEY is set automatically for local endpoints
 
 # Langfuse tracing (optional)
 LANGFUSE_PUBLIC_KEY=
 LANGFUSE_SECRET_KEY=
 LANGFUSE_HOST=http://localhost:3000
 ```
+
+Note: The system automatically provides a dummy API key for local endpoints. If using a real OpenAI endpoint, set `OPENAI_API_KEY` to your actual key.
 
 ## Key Components
 

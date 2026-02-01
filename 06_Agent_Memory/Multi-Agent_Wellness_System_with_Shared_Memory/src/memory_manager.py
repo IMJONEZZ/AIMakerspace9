@@ -56,6 +56,7 @@ class MemoryManager:
         self.embeddings = OpenAIEmbeddings(
             model=embeddings_model,
             base_url=os.environ.get("OPENAI_BASE_URL", "http://192.168.1.79:8080/v1"),
+            api_key=os.environ.get("OPENAI_API_KEY", "dummy-key-for-local-endpoint"),
             check_embedding_ctx_length=False,
         )
 
@@ -350,5 +351,6 @@ def create_llm() -> ChatOpenAI:
     return ChatOpenAI(
         model=os.environ.get("OPENAI_MODEL", "openai/gpt-oss-120b"),
         base_url=os.environ.get("OPENAI_BASE_URL", "http://192.168.1.79:8080/v1/"),
+        api_key=os.environ.get("OPENAI_API_KEY", "dummy-key-for-local-endpoint"),
         temperature=0,
     )
