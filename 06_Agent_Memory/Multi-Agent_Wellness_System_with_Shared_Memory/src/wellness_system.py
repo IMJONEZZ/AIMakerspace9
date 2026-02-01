@@ -83,16 +83,16 @@ class WellnessSystem:
         routing_decision = self.router.route_query(user_id, query)
 
         # Step 2: Get the appropriate specialist agent
-        agent = self.agent_map.get(routing_decision.decision)
+        agent = self.agent_map.get(routing_decision.agent)
         if not agent:
-            raise ValueError(f"Unknown agent: {routing_decision.decision}")
+            raise ValueError(f"Unknown agent: {routing_decision.agent}")
 
         # Step 3: Handle the query with the specialist
         response, success = agent.handle_query(user_id, query, thread_id)
 
         return {
             "response": response.content,
-            "agent_used": routing_decision.decision,
+            "agent_used": routing_decision.agent,
             "routing_reasoning": routing_decision.reasoning,
             "confidence": routing_decision.confidence,
             "success": success,
