@@ -1,0 +1,26 @@
+[project]
+name = "deep-wellness"
+version = "0.1.0"
+description = "Session 7: Deep Agents for Wellness Applications"
+requires-python = ">=3.11"
+dependencies = [
+    "deepagents>=0.3.0",
+    "langchain>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "langchain-anthropic>=0.3.0",
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0",
+    "jupyter>=1.0.0",
+    "ipykernel>=6.0.0",
+    "nest-asyncio>=1.5.0",
+]
+
+[project.optional-dependencies]
+cli = [
+    "deepagents-cli>=0.0.15",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0.0",
+]

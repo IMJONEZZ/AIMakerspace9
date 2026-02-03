@@ -9,7 +9,7 @@
 
 | Session Sheet | Recording     | Slides        | Repo         | Homework      | Feedback       |
 |:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|
-|[Agent Memory](https://github.com/AI-Maker-Space/AIE9/blob/main/00_Docs/Session_Sheets/06_Agent_Memory.md) | Coming soon! | Coming soon! | You are here! | Coming soon! | Coming soon! |
+| [Agent Memory](../00_Docs/Session_Sheets/06_Agent_Memory.md) |[Recording!](https://us02web.zoom.us/rec/share/4yIJxK2_0W0HimO6HNmpfG4axN25hzyaYVW2r2T1qyV9pgVj0dL8zPB1FJ3DU4Fd.g-4WZR6SML7DIx5x) <br> passcode: `rX1?b?03`| [Session 6 Slides](https://www.canva.com/design/DAG_1NHuEgU/0rYtze53UiliqeNbhIrDvA/edit?utm_content=DAG_1NHuEgU&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | You are here! | [Session 6 Assignment: Memory](https://forms.gle/eHbbv4xkFaBXE5QV8) | [Feedback 1/29](https://forms.gle/CPdviSGjFCf7rkPu9) |
 
 
 ### Outline:
