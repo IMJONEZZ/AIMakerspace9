@@ -7,6 +7,7 @@ app = marimo.App()
 @app.cell
 def _():
     import marimo as mo
+
     return (mo,)
 
 
@@ -64,14 +65,14 @@ def _(mo):
     Before we begin, make sure you have:
 
     1. **Self-hosted Services**:
-       - Local LLM endpoint at http://192.168.1.79:8080/v1 (using kimi-k2.5 model)
+       - Local LLM endpoint at http://192.168.1.79:8080/v1 (using glm-4.7 model)
        - SearxNG instance at http://192.168.1.36:4000 for web search
        - Langfuse instance (optional, for tracing) at http://localhost:3000
 
     2. **Dependencies installed** via `uv sync`
 
     **Models Used:**
-    - **kimi-k2.5**: Both supervisor and specialist agents (local, self-hosted LLM)
+    - **glm-4.7**: Both supervisor and specialist agents (local, self-hosted LLM)
 
     **Documentation:**
     - [SearxNG Search Tool](https://docs.langchain.com/oss/python/integrations/providers/searx)
@@ -148,17 +149,17 @@ def _():
 
 @app.cell
 def _():
-    # Initialize LLMs - Using local endpoint with kimi-k2.5 for both supervisor and specialists
+    # Initialize LLMs - Using local endpoint with glm-4.7 for both supervisor and specialists
     from langchain_openai import ChatOpenAI
 
     # Supervisor model - better reasoning for routing and orchestration
     supervisor_llm = ChatOpenAI(
-        model="kimi-k2.5", temperature=0, base_url="http://192.168.1.79:8080/v1"
+        model="glm-4.7", temperature=0, base_url="http://192.168.1.79:8080/v1"
     )
 
     # Specialist model - cost-effective for domain-specific tasks
     specialist_llm = ChatOpenAI(
-        model="kimi-k2.5", temperature=0, base_url="http://192.168.1.79:8080/v1"
+        model="glm-4.7", temperature=0, base_url="http://192.168.1.79:8080/v1"
     )
 
     # Test both models
@@ -170,8 +171,8 @@ def _():
         "Say 'Specialist ready!' in exactly 2 words."
     )
 
-    print(f"Supervisor (kimi-k2.5): {supervisor_response.content}")
-    print(f"Specialist (kimi-k2.5): {specialist_response.content}")
+    print(f"Supervisor (glm-4.7): {supervisor_response.content}")
+    print(f"Specialist (glm-4.7): {specialist_response.content}")
     return specialist_llm, supervisor_llm
 
 
@@ -412,7 +413,7 @@ def _(
     specialist_llm,
 ):
     # Create specialist agents using create_agent (LangChain 1.0 API)
-    # Each specialist uses kimi-k2.5 for domain-specific tasks
+    # Each specialist uses glm-4.7 for domain-specific tasks
 
     exercise_agent = create_agent(
         model=specialist_llm,
@@ -438,7 +439,7 @@ def _(
         system_prompt="You are a Stress Management Specialist. Help users with stress relief, mindfulness, and mental wellness. Always search the knowledge base before answering. Be concise and helpful.",
     )
 
-    print("Specialist agents created (using kimi-k2.5 with create_agent)!")
+    print("Specialist agents created (using glm-4.7 with create_agent)!")
     return exercise_agent, nutrition_agent, sleep_agent, stress_agent
 
 
@@ -474,7 +475,7 @@ def _(
     propagate_attributes,
     supervisor_llm,
 ):
-    # Create the supervisor node (using kimi-k2.5 for routing decisions)
+    # Create the supervisor node (using glm-4.7 for routing decisions)
     from langchain_core.prompts import ChatPromptTemplate
 
     supervisor_prompt = ChatPromptTemplate.from_messages(
@@ -499,7 +500,7 @@ def _(
         ]
     )
 
-    # Create structured output for routing (using kimi-k2.5)
+    # Create structured output for routing (using glm-4.7)
     routing_llm = supervisor_llm.with_structured_output(RouterOutput)
 
     observe()
@@ -518,12 +519,12 @@ def _(
             prompt_value = supervisor_prompt.invoke({"question": user_question})
             result = routing_llm.invoke(prompt_value)
 
-        print(f"[Supervisor kimi-k2.5] Routing to: {result.next}")
+        print(f"[Supervisor glm-4.7] Routing to: {result.next}")
         print(f"  Reason: {result.reasoning}")
 
         return {"next": result.next}
 
-    print("Supervisor node created (using kimi-k2.5)!")
+    print("Supervisor node created (using glm-4.7)!")
     return ChatPromptTemplate, supervisor_node
 
 
@@ -883,7 +884,6 @@ def _(
     create_agent,
     exercise_agent,
     nutrition_agent,
-    observe,
     propagate_attributes,
     retriever,
     route_to_agent,
@@ -919,7 +919,7 @@ def _(
     class NewRouterOutput(BaseModel):
         """The supervisor's routing decision."""
 
-        next: Literal["exercise", "hydration", "diet", "sleep", "stress"]
+        next: Literal["exercise", "nutrition", "sleep", "stress", "hydration"]
         reasoning: str
 
     # Update supervisor prompt
@@ -931,18 +931,17 @@ def _(
 
     Your team:
     - exercise: Handles fitness, workouts, physical activity, movement questions
-    - hydration: Handles water intake, dehydration signs, hydration tips, fluid balance questions
-    - diet: Handles diet, meal planning, healthy eating, food questions.
+    - nutrition: Handles diet, meal planning, healthy eating, food questions
     - sleep: Handles sleep quality, insomnia, rest, recovery questions
     - stress: Handles stress management, mindfulness, mental wellness, anxiety questions
-
+    - hydration: Handles water intake, dehydration signs, hydration tips, fluid balance questions
 
     Based on the user's question, decide which ONE specialist should respond.
     Choose the most relevant specialist for the primary topic of the question.""",
             ),
             (
                 "human",
-                "User question: {question}\n\nWhich specialist should handle this? Respond with only the correct specialist, do not mention any incorrect specialist.",
+                "User question: {question}\n\nWhich specialist should handle this?",
             ),
         ]
     )
@@ -950,11 +949,10 @@ def _(
     # Create structured output for routing
     new_routing_llm = supervisor_llm.with_structured_output(RouterOutput)
 
-    @observe()
     def new_supervisor_node(state: SupervisorState):
         """The supervisor decides which agent to route to."""
         user_question = ""
-        with propagate_attributes(session_id="hydration_agent_test"):
+        with propagate_attributes(session_id="supervisor_node"):
             for msg in reversed(state["messages"]):
                 if isinstance(msg, HumanMessage):
                     user_question = msg.content
@@ -994,7 +992,7 @@ def _(
 
     # Create nodes for other specialists
     new_exercise_node = new_create_agent_node(exercise_agent, "exercise")
-    new_diet_node = new_create_agent_node(nutrition_agent, "diet")
+    new_nutrition_node = new_create_agent_node(nutrition_agent, "nutrition")
     new_sleep_node = new_create_agent_node(sleep_agent, "sleep")
     new_stress_node = new_create_agent_node(stress_agent, "stress")
 
@@ -1002,11 +1000,10 @@ def _(
     new_supervisor_workflow = StateGraph(SupervisorState)
     new_supervisor_workflow.add_node("supervisor", new_supervisor_node)
     new_supervisor_workflow.add_node("exercise", new_exercise_node)
-    new_supervisor_workflow.add_node("hydration", hydration_node)
-    new_supervisor_workflow.add_node("diet", new_diet_node)
+    new_supervisor_workflow.add_node("nutrition", new_nutrition_node)
     new_supervisor_workflow.add_node("sleep", new_sleep_node)
     new_supervisor_workflow.add_node("stress", new_stress_node)
-
+    new_supervisor_workflow.add_node("hydration", hydration_node)
 
     # Add edges
     new_supervisor_workflow.add_edge(START, "supervisor")
@@ -1015,33 +1012,32 @@ def _(
         route_to_agent,
         {
             "exercise": "exercise",
-            "hydration": "hydration",
-            "diet": "diet",
+            "nutrition": "nutrition",
             "sleep": "sleep",
             "stress": "stress",
+            "hydration": "hydration",
         },
     )
 
     # Each specialist goes directly to END
     new_supervisor_workflow.add_edge("exercise", END)
-    new_supervisor_workflow.add_edge("hydration", END)
-    new_supervisor_workflow.add_edge("diet", END)
+    new_supervisor_workflow.add_edge("nutrition", END)
     new_supervisor_workflow.add_edge("sleep", END)
     new_supervisor_workflow.add_edge("stress", END)
-
+    new_supervisor_workflow.add_edge("hydration", END)
 
     # Compile
     new_supervisor_graph = new_supervisor_workflow.compile()
-    return (new_supervisor_graph,)
+    return
 
 
 @app.cell
-def _(HumanMessage, langfuse, langfuse_handler, new_supervisor_graph):
+def _(HumanMessage, langfuse, langfuse_handler, supervisor_graph):
     # Step 4: Test the new agent
     print("Testing Hydration Specialist Agent")
     print("=" * 50)
 
-    test_response = new_supervisor_graph.invoke(
+    test_response = supervisor_graph.invoke(
         {"messages": [HumanMessage(content="What are the signs of dehydration?")]},
         config={"callbacks": [langfuse_handler]} if langfuse_handler else {},
     )
@@ -1051,7 +1047,7 @@ def _(HumanMessage, langfuse, langfuse_handler, new_supervisor_graph):
     print(test_response["messages"][-1].content)
 
     # Additional test
-    test_response2 = new_supervisor_graph.invoke(
+    test_response2 = supervisor_graph.invoke(
         {"messages": [HumanMessage(content="How much water should I drink daily?")]},
         config={"callbacks": [langfuse_handler]} if langfuse_handler else {},
     )
@@ -1321,16 +1317,16 @@ def _(
     stress_handoff_node,
     supervisor_llm,
 ):
-    # Build the handoff graph with initial routing (using kimi-k2.5)
+    # Build the handoff graph with initial routing (using glm-4.7)
     def entry_router(state: HandoffState):
-        """Initial routing based on the user's question (using kimi-k2.5)."""
+        """Initial routing based on the user's question (using glm-4.7)."""
         user_question = state["messages"][-1].content
         router_prompt = f"Based on this question, which specialist should handle it?\nOptions: exercise, nutrition, sleep, stress\n\nQuestion: {user_question}\n\nRespond with just the specialist name (one word)."
         _response = supervisor_llm.invoke(router_prompt)
         agent = _response.content.strip().lower()
         if agent not in ["exercise", "nutrition", "sleep", "stress"]:
             agent = "stress"
-        print(f"[Router kimi-k2.5] Initial routing to: {agent}")
+        print(f"[Router glm-4.7] Initial routing to: {agent}")
         return {"current_agent": agent, "transfer_count": 0}
 
     def route_by_current_agent(state: HandoffState) -> str:
@@ -1525,7 +1521,7 @@ def _(mo):
 
 @app.cell
 def _(BaseMessage, SystemMessage, specialist_llm):
-    # Implement a context summarization function (using kimi-k2.5)
+    # Implement a context summarization function (using glm-4.7)
 
     def summarize_conversation(
         messages: list[BaseMessage], max_messages: int = 6
@@ -1621,7 +1617,7 @@ def _(mo):
 
     ### Requirements:
 
-    1. Create a **Wellness Director** (top-level supervisor using kimi-k2.5) that:
+    1. Create a **Wellness Director** (top-level supervisor using glm-4.7) that:
        - Receives user questions and determines which team should handle it
        - Routes to either the "Physical Wellness Team" or "Mental Wellness Team"
        - Aggregates final responses from teams
@@ -1641,7 +1637,7 @@ def _(mo):
     ```
                         ┌─────────────────────┐
                         │  Wellness Director  │
-                        │     (kimi-k2.5)      │
+                        │     (glm-4.7)      │
                         └──────────┬──────────┘
                                    │
                   ┌────────────────┴────────────────┐
@@ -1669,25 +1665,24 @@ def _(mo):
 
 @app.cell
 def _(
-    AIMessage,
-    Annotated,
-    BaseMessage,
     BaseModel,
     ChatPromptTemplate,
-    END,
-    HumanMessage,
     Literal,
-    START,
-    StateGraph,
     TypedDict,
+    Annotated,
     add_messages,
+    BaseMessage,
+    AIMessage,
+    HumanMessage,
+    StateGraph,
+    START,
+    END,
+    supervisor_llm,
     exercise_agent,
     nutrition_agent,
-    observe,
-    propagate_attributes,
     sleep_agent,
     stress_agent,
-    supervisor_llm,
+    propagate_attributes,
 ):
     class TeamRouterOutput(BaseModel):
         next: str
@@ -1698,11 +1693,11 @@ def _(
             (
                 "system",
                 """You are the Physical Wellness Team Lead.
-    Your team has two specialists:
-    - exercise: Handles fitness, workouts, and physical activity
-    - nutrition: Handles diet, meal planning, and healthy eating
+Your team has two specialists:
+- exercise: Handles fitness, workouts, and physical activity
+- nutrition: Handles diet, meal planning, and healthy eating
 
-    Route to the most appropriate specialist for the user's question.""",
+Route to the most appropriate specialist for the user's question.""",
             ),
             ("human", "Question: {question}"),
         ]
@@ -1713,11 +1708,11 @@ def _(
             (
                 "system",
                 """You are the Mental Wellness Team Lead.
-    Your team has two specialists:
-    - sleep: Handles sleep quality, insomnia, and rest
-    - stress: Handles stress management, mindfulness, and mental wellness
+Your team has two specialists:
+- sleep: Handles sleep quality, insomnia, and rest
+- stress: Handles stress management, mindfulness, and mental wellness
 
-    Route to the most appropriate specialist for the user's question.""",
+Route to the most appropriate specialist for the user's question.""",
             ),
             ("human", "Question: {question}"),
         ]
@@ -1732,10 +1727,10 @@ def _(
             (
                 "system",
                 """You are the Wellness Director overseeing two teams:
-    - physical: Physical Wellness Team (exercise, nutrition)
-    - mental: Mental Wellness Team (sleep, stress)
+- physical: Physical Wellness Team (exercise, nutrition)
+- mental: Mental Wellness Team (sleep, stress)
 
-    Route to the appropriate team based on the user's question.""",
+Route to the appropriate team based on the user's question.""",
             ),
             ("human", "Question: {question}"),
         ]
@@ -1748,7 +1743,6 @@ def _(
 
     director_routing_llm = supervisor_llm.with_structured_output(DirectorRouterOutput)
 
-    @observe()
     def wellness_director_node(state: HierarchicalState):
         user_question = ""
         with propagate_attributes(session_id="wellness_director"):
@@ -1767,7 +1761,6 @@ def _(
 
     physical_routing_llm = supervisor_llm.with_structured_output(TeamRouterOutput)
 
-    @observe()
     def physical_team_lead_node(state: HierarchicalState):
         user_question = ""
         with propagate_attributes(session_id="physical_team_lead"):
@@ -1786,7 +1779,6 @@ def _(
 
     mental_routing_llm = supervisor_llm.with_structured_output(TeamRouterOutput)
 
-    @observe()
     def mental_team_lead_node(state: HierarchicalState):
         user_question = ""
         with propagate_attributes(session_id="mental_team_lead"):
@@ -1908,6 +1900,7 @@ def _(
     print(f"\nQuestion: {test_question_2}")
     print("Response:")
     print(response_2["messages"][-1].content)
+
     return
 
 

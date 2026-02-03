@@ -21,6 +21,9 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "nest-asyncio>=1.6.0",
     "tiktoken>=0.8.0",
+    "markdownify>=1.2.2",
+    "qdrant-client>=1.16.2",
+    "langchain-qdrant>=1.1.0",
 ]
 
 [tool.setuptools.package-dir]
@@ -29,3 +32,8 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["wellness_memory*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]

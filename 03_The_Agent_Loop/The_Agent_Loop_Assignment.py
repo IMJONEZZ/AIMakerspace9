@@ -689,10 +689,10 @@ def _(
     from typing import List, Tuple
 
     langchain_docs = []
-    for idx, doc_chunk in enumerate(chunks):
+    for idx, chunk in enumerate(chunks):
         # Determine category based on content
         category = "general"
-        chunk_lower = doc_chunk.lower()
+        chunk_lower = chunk.lower()
 
         if any(
             word in chunk_lower for word in ["sleep", "rest", "bedtime", "insomnia"]
@@ -714,8 +714,8 @@ def _(
         ):
             category = "mental_health"
 
-        doc_text = Document(
-            page_content=doc_chunk,
+        doc = Document(
+            page_content=chunk,
             metadata={
                 "source": "HealthWellnessGuide.txt",
                 "chunk_id": idx,
@@ -723,7 +723,7 @@ def _(
                 "total_chunks": len(chunks),
             },
         )
-        langchain_docs.append(doc_text)
+        langchain_docs.append(doc)
 
     # Create vector store
     vector_store = QdrantVectorStore(
@@ -742,7 +742,11 @@ def _(
 
     categories = [doc.metadata["category"] for doc in langchain_docs]
     print(f"Document distribution: {dict(Counter(categories))}")
-    return (vector_store,)
+
+    return (
+        langchain_docs,
+        vector_store,
+    )
 
 
 @app.cell
@@ -756,7 +760,7 @@ def _(vector_store):
     for i, doc in enumerate(test_results, 1):
         print(f"\n--- Document {i} ---")
         print(doc.page_content[:200] + "...")
-    return
+    return (retriever,)
 
 
 @app.cell(hide_code=True)
@@ -770,7 +774,7 @@ def _(mo):
 
 
 @app.cell
-def _(tool, vector_store):
+def _(retriever, tool, vector_store):
     from typing import Optional
 
     @tool
@@ -845,6 +849,10 @@ def _(tool, vector_store):
             )
 
         return "\n\n".join(formatted_results)
+
+    print(
+        "Enhanced wellness knowledge base tool created with metadata filtering, reranking, and citations!"
+    )
     return (search_wellness_knowledge,)
 
 
@@ -1102,8 +1110,8 @@ def _(mo):
 
 @app.cell
 def _(
-    calculate,
     call_limiter,
+    calculate,
     create_agent,
     get_current_time,
     local_model,
@@ -1111,8 +1119,14 @@ def _(
     log_before_model,
     search_wellness_knowledge,
 ):
-    ### OPTION C: Improve the RAG Tool ###
+    ### OPTION C: Improve the RAG Tool - Already Implemented Above! ###
 
+    # The search_wellness_knowledge tool has been enhanced with:
+    # 1. Metadata Filtering - Supports category_filter parameter (sleep, fitness, nutrition, mental_health)
+    # 2. Reranking - Results are sorted by relevance score (highest first)
+    # 3. Source Citations - Each result includes source file, chunk_id, category, and relevance score
+
+    # Create the enhanced wellness agent (this is already done above, but shown here for clarity)
     enhanced_rag_tools = [search_wellness_knowledge, calculate, get_current_time]
 
     enhanced_wellness_agent = create_agent(
@@ -1120,6 +1134,16 @@ def _(
         tools=enhanced_rag_tools,
         system_prompt="You are a helpful wellness assistant with access to a comprehensive health and wellness knowledge base.\n\nYour role is to:\n1. Answer questions about health, fitness, nutrition, sleep, and mental wellness\n2. Always search the knowledge base when the user asks wellness-related questions\n3. You can optionally filter searches by category: 'sleep', 'fitness', 'nutrition', or 'mental_health'\n4. The search tool provides results with relevance scores and source citations\n5. Provide accurate, helpful information based on the retrieved context\n6. Be supportive and encouraging in your responses\n7. If you cannot find relevant information, say so honestly",
         middleware=[log_before_model, log_after_model, call_limiter],
+    )
+
+    print("Enhanced Wellness Agent created with improved RAG tool!")
+    print("\n✅ Enhancements implemented:")
+    print(
+        "  • Metadata Filtering: Filter by category (sleep, fitness, nutrition, mental_health)"
+    )
+    print("  • Reranking: Results automatically sorted by relevance score")
+    print(
+        "  • Source Citations: Each result includes source, chunk_id, category, and relevance score"
     )
     return (enhanced_wellness_agent,)
 
@@ -1135,7 +1159,7 @@ def _(enhanced_wellness_agent, langfuse_handler):
     response_test1 = enhanced_wellness_agent.invoke(
         {
             "messages": [
-                {"role": "user", "content": "I'm feeling stressed. How can I manage stress better?"}
+                {"role": "user", "content": "What are some tips for better sleep?"}
             ]
         },
         config={"callbacks": [langfuse_handler]} if langfuse_handler else {},
@@ -1153,7 +1177,7 @@ def _(enhanced_wellness_agent, langfuse_handler):
             "messages": [
                 {
                     "role": "user",
-                    "content": "I'm feeling stressed. How can I manage stress better? Please search using the nutrition category filter.",
+                    "content": "I want to improve my diet. What should I eat for better nutrition? Please search using the nutrition category filter.",
                 }
             ]
         },
@@ -1181,12 +1205,17 @@ def _(enhanced_wellness_agent, langfuse_handler):
 
     print("\nAgent Response:")
     print(response_test3["messages"][-1].content)
-    return
+
+    print("\n" + "=" * 70)
+    print("✅ All tests completed!")
+    print("=" * 70)
+    return (response_test1, response_test2, response_test3)
 
 
 @app.cell
 def _():
     import marimo as mo
+
     return (mo,)
 
 

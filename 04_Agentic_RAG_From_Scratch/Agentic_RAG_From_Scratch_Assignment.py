@@ -7,6 +7,7 @@ app = marimo.App()
 @app.cell
 def _():
     import marimo as mo
+
     return (mo,)
 
 
@@ -107,9 +108,7 @@ def _():
     # Test connection to Ollama
     try:
         test_llm = ChatOllama(model="gpt-oss:20b", temperature=0)
-        test_response = test_llm.invoke(
-            "Say 'Ollama is working!' in exactly 3 words."
-        )
+        test_response = test_llm.invoke("Say 'Ollama is working!' in exactly 3 words.")
         print(f"Chat Model Test: {test_response.content}")
 
         test_embeddings = OllamaEmbeddings(model="embeddinggemma")
@@ -172,11 +171,9 @@ def _(Annotated, TypedDict):
     from langgraph.graph.message import add_messages
     from langchain_core.messages import HumanMessage, AIMessage
 
-
     # Step 1: Define the State
     class SimpleState(TypedDict):
         messages: Annotated[list, add_messages]
-
 
     # Step 2: Define Nodes (functions that process state)
     def echo_node(state: SimpleState):
@@ -184,7 +181,6 @@ def _(Annotated, TypedDict):
         last_message = state["messages"][-1]
         echo_response = AIMessage(content=f"You said: {last_message.content}")
         return {"messages": [echo_response]}
-
 
     # Step 3: Build the Graph
     echo_graph = StateGraph(SimpleState)
@@ -228,7 +224,6 @@ def _(HumanMessage, echo_app):
         for _msg in result["messages"]:
             role = "Human" if isinstance(_msg, HumanMessage) else "AI"
         return print(f"  [{role}]: {_msg.content}")
-
 
     test_echo_graph()
     return
@@ -291,13 +286,11 @@ def _(Annotated, TypedDict, add_messages):
     from langchain_core.tools import tool
     from langgraph.prebuilt import ToolNode
 
-
     # Step 1: Define the Agent State
     class AgentState(TypedDict):
         """The state of our agent - just a list of messages."""
 
         messages: Annotated[list[BaseMessage], add_messages]
-
 
     print("AgentState defined with messages field")
     return AgentState, BaseMessage, SystemMessage, ToolNode, tool
@@ -349,14 +342,12 @@ def _(llm, tool):
         except Exception as e:
             return f"Error evaluating expression: {e}"
 
-
     @tool
     def get_current_time() -> str:
         """Get the current date and time. Use this when the user asks about the current time or date."""
         from datetime import datetime
 
         return f"The current date and time is: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-
 
     tools = [calculate, get_current_time]
     llm_with_tools = llm.bind_tools(tools)
@@ -373,13 +364,11 @@ def _(AgentState, SystemMessage, llm_with_tools):
     # Step 4: Define the Agent Node (calls the LLM)
     SYSTEM_PROMPT = "You are a helpful assistant that can perform calculations and tell the time.\nAlways use the available tools when appropriate.\nBe concise in your responses."
 
-
     def agent_node(state: AgentState):
         """The agent node - calls the LLM with the current conversation."""
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]
         _response = llm_with_tools.invoke(messages)
         return {"messages": [_response]}  # Prepare messages with system prompt
-
 
     print(
         "Agent node defined"
@@ -410,7 +399,6 @@ def _(AgentState, Literal):
 
         # Otherwise, end the conversation
         return "end"
-
 
     print("Conditional routing function defined")
     return (should_continue,)
@@ -473,9 +461,7 @@ def _(HumanMessage, agent):
     # Test our agent!
     print("Testing our from-scratch agent:")
     print("=" * 50)
-    _response = agent.invoke(
-        {"messages": [HumanMessage(content="What is 25 * 48?")]}
-    )
+    _response = agent.invoke({"messages": [HumanMessage(content="What is 25 * 48?")]})
     print("\nConversation:")
     for _msg in _response["messages"]:
         msg_type = type(_msg).__name__
@@ -525,9 +511,7 @@ def _(HumanMessage, agent):
                     if hasattr(_msg, "content") and _msg.content:
                         print(f"  Content: {_msg.content[:200]}")
                     if hasattr(_msg, "tool_calls") and _msg.tool_calls:
-                        print(
-                            f"  Tool calls: {[tc['name'] for tc in _msg.tool_calls]}"
-                        )
+                        print(f"  Tool calls: {[tc['name'] for tc in _msg.tool_calls]}")
     return
 
 
@@ -605,11 +589,9 @@ def _(
 
     CUSTOM_ROUTING_SYSTEM_PROMPT = "You are a helpful assistant that can perform calculations and tell the time.\nAlways use the available tools when appropriate.\nBe concise in your responses."
 
-
     class AgentStateWithCounter(TypedDict):
         messages: Annotated[list[BaseMessage], add_messages]
         iteration_count: int
-
 
     def custom_should_continue(
         state: AgentStateWithCounter,
@@ -628,7 +610,6 @@ def _(
 
         return "end"
 
-
     def route_by_tool_type(
         state: AgentStateWithCounter,
     ) -> Literal["calculation_tools", "info_tools"]:
@@ -645,7 +626,6 @@ def _(
         else:
             return "info_tools"
 
-
     def agent_node_with_counter(state: AgentStateWithCounter):
         """Agent node that updates iteration counter."""
         messages = [SystemMessage(content=CUSTOM_ROUTING_SYSTEM_PROMPT)] + state[
@@ -656,7 +636,6 @@ def _(
         new_iteration_count = state.get("iteration_count", 0) + 1
 
         return {"messages": [response], "iteration_count": new_iteration_count}
-
 
     def thinking_node(state: AgentStateWithCounter):
         """Thinking step before tool execution - extracts and displays model's actual reasoning."""
@@ -671,9 +650,7 @@ def _(
             hasattr(last_message, "additional_kwargs")
             and last_message.additional_kwargs
         ):
-            reasoning_content = last_message.additional_kwargs.get(
-                "reasoning_content"
-            )
+            reasoning_content = last_message.additional_kwargs.get("reasoning_content")
 
         if not reasoning_content:
             return {"messages": []}
@@ -683,7 +660,6 @@ def _(
         thinking_message = AIMessage(content=f"[Thinking] {reasoning_content}")
 
         return {"messages": [thinking_message]}
-
 
     calc_tools = [calculate]
     info_tools = [get_current_time]
@@ -970,7 +946,6 @@ def _(retriever, tool):
 
         return "\n\n".join(formatted_results)
 
-
     print(f"RAG tool created: {search_wellness_knowledge.name}")
     return (search_wellness_knowledge,)
 
@@ -1002,13 +977,11 @@ def _(AgentState, SystemMessage, ToolNode, rag_llm_with_tools, rag_tools):
     # Define the RAG agent components
     RAG_SYSTEM_PROMPT = "You are a helpful wellness assistant with access to a comprehensive health and wellness knowledge base.\n\nYour role is to:\n1. Answer questions about health, fitness, nutrition, sleep, and mental wellness\n2. ALWAYS search the knowledge base when the user asks wellness-related questions\n3. Provide accurate, helpful information based on the retrieved context\n4. Be supportive and encouraging in your responses\n5. If you cannot find relevant information, say so honestly\n\nRemember: Always cite information from the knowledge base when applicable."
 
-
     def rag_agent_node(state: AgentState):
         """The RAG agent node - calls the LLM with wellness system prompt."""
         messages = [SystemMessage(content=RAG_SYSTEM_PROMPT)] + state["messages"]
         _response = rag_llm_with_tools.invoke(messages)
         return {"messages": [_response]}
-
 
     rag_tool_node = ToolNode(rag_tools)
     # Create tool node for RAG tools
@@ -1069,11 +1042,7 @@ def _(HumanMessage, rag_agent):
     print("Testing Agentic RAG (with local models):")
     print("=" * 50)
     _response = rag_agent.invoke(
-        {
-            "messages": [
-                HumanMessage(content="What are some tips for better sleep?")
-            ]
-        }
+        {"messages": [HumanMessage(content="What are some tips for better sleep?")]}
     )
     print("\nFinal Response:")
     print("=" * 50)
@@ -1190,11 +1159,7 @@ def _(HumanMessage, rag_workflow):
     print("=" * 70)
 
     response1 = rag_agent_with_memory.invoke(
-        {
-            "messages": [
-                HumanMessage(content="What are some tips for better sleep?")
-            ]
-        },
+        {"messages": [HumanMessage(content="What are some tips for better sleep?")]},
         config,
     )
 
@@ -1206,8 +1171,7 @@ def _(HumanMessage, rag_workflow):
     print("=" * 70)
 
     response2 = rag_agent_with_memory.invoke(
-        {"messages": [HumanMessage(content="What about morning routines?")]},
-        config,
+        {"messages": [HumanMessage(content="What about morning routines?")]}, config
     )
 
     print("Response 2:", response2["messages"][-1].content)
@@ -1267,22 +1231,20 @@ def _(HumanMessage, rag_agent_with_memory):
         config3,
     )
     print("Question: What are 3 things I can do to improve my sleep quality?")
-    print("Answer:", response["messages"][-1].content)
+    print("Answer:", response["messages"][-1].content[:300] + "...")
 
     # Turn 2: Follow-up question (tests memory of turn 1)
     print("\n--- Turn 2 ---")
     response = rag_agent_with_memory.invoke(
         {
             "messages": [
-                HumanMessage(
-                    content="How about nutrition? What foods help with sleep?"
-                )
+                HumanMessage(content="How about nutrition? What foods help with sleep?")
             ]
         },
         config3,
     )
     print("Question: How about nutrition? What foods help with sleep?")
-    print("Answer:", response["messages"][-1].content)
+    print("Answer:", response["messages"][-1].content[:300] + "...")
 
     # Turn 3: Synthesis question (tests memory of both previous turns)
     print("\n--- Turn 3 ---")
@@ -1299,7 +1261,7 @@ def _(HumanMessage, rag_agent_with_memory):
     print(
         "Question: Can you create a simple evening routine combining the sleep tips and nutrition advice?"
     )
-    print("Answer:", response["messages"][-1].content)
+    print("Answer:", response["messages"][-1].content[:400] + "...")
 
     # Turn 4: Clarification (tests context retention)
     print("\n--- Turn 4 ---")
@@ -1314,7 +1276,7 @@ def _(HumanMessage, rag_agent_with_memory):
         config3,
     )
     print("Question: What was the first tip you mentioned about sleep?")
-    print("Answer:", response["messages"][-1].content)
+    print("Answer:", response["messages"][-1].content[:300] + "...")
 
     print("\n" + "=" * 70)
     print("Memory Test Complete!")

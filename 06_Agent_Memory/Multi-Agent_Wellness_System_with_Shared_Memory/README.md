@@ -169,6 +169,17 @@ LANGFUSE_HOST=http://localhost:3000
 ### Step 3: Run Demo (Mock Mode)
 
 ```bash
+# Change to the wellness system directory
+cd Multi-Agent_Wellness_System_with_Shared_Memory
+
+# Game Agent System Demo (no API calls)
+python demo_game_agent.py --game "The Legend of Zelda" --verbose
+
+# Wellness System Demo
+python demo.py
+```
+
+```bash
 # Game Agent System Demo (no API calls)
 python demo_game_agent.py --game "The Legend of Zelda" --verbose
 
@@ -196,6 +207,8 @@ result = system.handle_query('user123', 'What exercises can I do with a knee inj
 print(result)
 "
 ```
+
+**Note**: All commands should be run from within the `Multi-Agent_Wellness_System_with_Shared_Memory/` directory.
 
 ## Quick Start
 

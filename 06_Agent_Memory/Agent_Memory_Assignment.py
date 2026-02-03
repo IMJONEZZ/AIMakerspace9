@@ -7,7 +7,6 @@ app = marimo.App()
 @app.cell
 def _():
     import marimo as mo
-
     return (mo,)
 
 
@@ -100,8 +99,12 @@ def _(getpass, os):
 @app.cell
 def _(os):
     # Langfuse for tracing (local docker instance)
-    os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-lf-b76a11bf-0d3e-4b42-981d-aef04ac7ac80"
-    os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-31d5642a-6af9-436a-a2aa-a3ab1b310995"
+    os.environ["LANGFUSE_PUBLIC_KEY"] = (
+        "pk-lf-b76a11bf-0d3e-4b42-981d-aef04ac7ac80"
+    )
+    os.environ["LANGFUSE_SECRET_KEY"] = (
+        "sk-lf-31d5642a-6af9-436a-a2aa-a3ab1b310995"
+    )
     os.environ["LANGFUSE_HOST"] = "http://localhost:3000"
 
     if not os.environ["LANGFUSE_SECRET_KEY"]:
@@ -117,7 +120,9 @@ def _():
     from langchain_openai import ChatOpenAI
 
     llm = ChatOpenAI(
-        model="glm-4.7", base_url="http://192.168.1.79:8080/v1/", temperature=0
+        model="openai/gpt-oss-120b",
+        base_url="http://192.168.1.79:8080/v1/",
+        temperature=0,
     )
     _response = llm.invoke("Say 'Memory systems ready!' in exactly those words.")
     # Test the connection
@@ -196,18 +201,18 @@ def _(mo):
     ### How It Works
 
     ```
-    Thread 1: "Hi, I'm Alice"          Thread 2: "What's my name?"
+    Thread 1: "Hi, I'm Chris_B"          Thread 2: "What's my name?"
          │                                   │
          ▼                                   ▼
     ┌──────────────┐                   ┌──────────────┐
     │ Checkpointer │                   │ Checkpointer │
     │  thread_1    │                   │  thread_2    │
     │              │                   │              │
-    │ ["Hi Alice"] │                   │ [empty]      │
+    │ ["Hi Chris_B"] │                   │ [empty]      │
     └──────────────┘                   └──────────────┘
          │                                   │
          ▼                                   ▼
-    "Hi Alice!"                        "I don't know your name"
+    "Hi Chris_B!"                        "I don't know your name"
     ```
     """)
     return
@@ -220,10 +225,12 @@ def _(Annotated, TypedDict, llm):
     from langgraph.checkpoint.memory import MemorySaver
     from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
+
     # Define the state schema for our graph
     # The `add_messages` annotation tells LangGraph how to update the messages list
     class State(TypedDict):
         messages: Annotated[list, add_messages]
+
 
     def wellness_chatbot(state: State):
         # Define our wellness chatbot node
@@ -235,12 +242,17 @@ def _(Annotated, TypedDict, llm):
         _response = llm.invoke(messages)
         return {"messages": [_response]}
 
-    builder = StateGraph(State)
-    builder.add_node("chatbot", wellness_chatbot)
-    builder.add_edge(START, "chatbot")
-    builder.add_edge("chatbot", END)
-    checkpointer = MemorySaver()
-    wellness_graph = builder.compile(checkpointer=checkpointer)
+
+    def _():
+        builder = StateGraph(State)
+        builder.add_node("chatbot", wellness_chatbot)
+        builder.add_edge(START, "chatbot")
+        builder.add_edge("chatbot", END)
+        checkpointer = MemorySaver()
+        wellness_graph = builder.compile(checkpointer=checkpointer)
+        return wellness_graph
+
+
     # Build the graph
     # Compile with a checkpointer for short-term memory
     print("Wellness chatbot compiled with short-term memory (checkpointing)")
@@ -253,7 +265,6 @@ def _(Annotated, TypedDict, llm):
         StateGraph,
         SystemMessage,
         add_messages,
-        wellness_graph,
     )
 
 
@@ -284,7 +295,9 @@ def _(HumanMessage, config, wellness_graph):
     _response = wellness_graph.invoke(
         {
             "messages": [
-                HumanMessage(content="What's my name and what am I trying to improve?")
+                HumanMessage(
+                    content="What's my name and what am I trying to improve?"
+                )
             ]
         },
         config,
@@ -317,7 +330,9 @@ def _(HumanMessage, config, wellness_graph):
     print(f"Thread 1 has {len(state.values['messages'])} messages:")
     for _msg in state.values["messages"]:
         _role = "User" if isinstance(_msg, HumanMessage) else "Assistant"
-        _content = _msg.content[:80] + "..." if len(_msg.content) > 80 else _msg.content
+        _content = (
+            _msg.content[:80] + "..." if len(_msg.content) > 80 else _msg.content
+        )
         print(f"  {_role}: {_content}")
     return
 
@@ -420,10 +435,12 @@ def _(
     from langgraph.store.base import BaseStore
     from langchain_core.runnables import RunnableConfig
 
+
     # Define state with user_id for personalization
     class PersonalizedState(TypedDict):
         messages: Annotated[list, add_messages]
         user_id: str
+
 
     def personalized_wellness_chatbot(
         state: PersonalizedState, config: RunnableConfig, *, store: BaseStore
@@ -442,6 +459,7 @@ def _(
         messages = [SystemMessage(content=system_msg)] + state["messages"]
         _response = llm.invoke(messages)  # Build context from profile
         return {"messages": [_response]}
+
 
     builder2 = StateGraph(PersonalizedState)
     builder2.add_node("chatbot", personalized_wellness_chatbot)
@@ -469,7 +487,9 @@ def _(HumanMessage, personalized_graph):
     print("User: What exercises would you recommend for me?")
     print(f"Assistant: {_response['messages'][-1].content}")
     print()
-    print("Notice: The agent knows about Sarah's bad knee without her mentioning it!")
+    print(
+        "Notice: The agent knows about Sarah's bad knee without her mentioning it!"
+    )
     return
 
 
@@ -488,7 +508,9 @@ def _(HumanMessage, personalized_graph):
     print("User (NEW thread): Can you suggest a snack for me?")
     print(f"Assistant: {_response['messages'][-1].content}")
     print()
-    print("Notice: Even in a new thread, the agent knows Sarah has a peanut allergy!")
+    print(
+        "Notice: Even in a new thread, the agent knows Sarah has a peanut allergy!"
+    )
     return
 
 
@@ -514,13 +536,14 @@ def _(mo):
 
 
 @app.cell
-def _(AIMessage, HumanMessage, SystemMessage, llm):
+def _(AIMessage, HumanMessage, SystemMessage):
     from langchain_core.messages import trim_messages
+    from langchain_core.messages.utils import count_tokens_approximately
 
     trimmer = trim_messages(
         max_tokens=500,
         strategy="last",
-        token_counter=llm,
+        token_counter=count_tokens_approximately,
         include_system=True,
         allow_partial=False,
     )
@@ -543,9 +566,13 @@ def _(AIMessage, HumanMessage, SystemMessage, llm):
         AIMessage(
             content="Aim for 7-9 hours. Maintain a consistent sleep schedule and create a relaxing bedtime routine."
         ),
-        HumanMessage(content="What's the most important change I should make first?"),
+        HumanMessage(
+            content="What's the most important change I should make first?"
+        ),
     ]
-    trimmed = trimmer.invoke(long_conversation)  # Keep messages up to this token count
+    trimmed = trimmer.invoke(
+        long_conversation
+    )  # Keep messages up to this token count
     print(
         f"Original: {len(long_conversation)} messages"
     )  # Keep the most recent messages
@@ -553,7 +580,9 @@ def _(AIMessage, HumanMessage, SystemMessage, llm):
     print("\nTrimmed conversation:")  # Always keep system messages
     for _msg in trimmed:  # Don't cut messages in half
         _role = type(_msg).__name__.replace("Message", "")
-        _content = _msg.content[:60] + "..." if len(_msg.content) > 60 else _msg.content
+        _content = (
+            _msg.content[:60] + "..." if len(_msg.content) > 60 else _msg.content
+        )
         # Example: Create a long conversation
         # Trim to fit context window
         print(f"  {_role}: {_content}")
@@ -567,7 +596,9 @@ def _(SystemMessage, llm, long_conversation):
         """Summarize older messages to manage context length."""
         if len(messages) <= max_messages:
             return messages
-        system_msg = messages[0] if isinstance(messages[0], SystemMessage) else None
+        system_msg = (
+            messages[0] if isinstance(messages[0], SystemMessage) else None
+        )
         content_messages = messages[1:] if system_msg else messages
         if (
             len(content_messages) <= max_messages
@@ -581,19 +612,26 @@ def _(SystemMessage, llm, long_conversation):
         if system_msg:
             result.append(system_msg)
         result.append(
-            SystemMessage(content=f"[Previous conversation summary: {summary.content}]")
+            SystemMessage(
+                content=f"[Previous conversation summary: {summary.content}]"
+            )
         )
         result.extend(recent_messages)  # Summarize old messages
         return result
+
 
     summarized = summarize_conversation(long_conversation, max_messages=4)
     print(f"Summarized: {len(summarized)} messages")
     print("\nSummarized conversation:")
     for _msg in summarized:
         _role = type(_msg).__name__.replace("Message", "")
-        _content = _msg.content[:80] + "..." if len(_msg.content) > 80 else _msg.content
+        _content = (
+            _msg.content[:80] + "..." if len(_msg.content) > 80 else _msg.content
+        )
         # Test summarization
-        print(f"  {_role}: {_content}")  # Return: system + summary + recent messages
+        print(
+            f"  {_role}: {_content}"
+        )  # Return: system + summary + recent messages
     return (summarize_conversation,)
 
 
@@ -682,15 +720,17 @@ def _(
         for key, value in profile.items():
             store.put(namespace, key, {"value": value})
 
+
     def get_wellness_profile(store, user_id: str) -> dict:
         """Retrieve a user's wellness profile."""
         namespace = (user_id, "wellness_profile")
         profile_items = list(store.search(namespace))
         return {item.key: item.value["value"] for item in profile_items}
 
+
     # Step 3: Create two different user profiles
-    alice_profile = {
-        "name": "Alice",
+    Chris_B_profile = {
+        "name": "Chris_B",
         "age": 28,
         "goals": ["lose weight", "improve cardiovascular health"],
         "conditions": ["asthma"],
@@ -698,8 +738,8 @@ def _(
         "fitness_level": "beginner",
     }
 
-    bob_profile = {
-        "name": "Bob",
+    Chris_A_profile = {
+        "name": "Chris_A",
         "age": 45,
         "goals": ["build muscle", "reduce stress"],
         "conditions": ["high blood pressure"],
@@ -707,15 +747,17 @@ def _(
         "fitness_level": "intermediate",
     }
 
-    store_wellness_profile(store, "user_alice", alice_profile)
-    store_wellness_profile(store, "user_bob", bob_profile)
+    store_wellness_profile(store, "user_Chris_B", Chris_B_profile)
+    store_wellness_profile(store, "user_Chris_A", Chris_A_profile)
 
-    print("Stored Alice's and Bob's wellness profiles")
+    print("Stored Chris_B's and Chris_A's wellness profiles")
+
 
     # Step 4: Build a personalized agent that uses profiles
     class ProfileState(TypedDict):
         messages: Annotated[list, add_messages]
         user_id: str
+
 
     def profile_wellness_assistant(
         state: ProfileState, config: RunnableConfig, *, store: BaseStore
@@ -736,6 +778,7 @@ def _(
         response = llm.invoke(messages)
         return {"messages": [response]}
 
+
     builder = StateGraph(ProfileState)
     builder.add_node("chatbot", profile_wellness_assistant)
     builder.add_edge(START, "chatbot")
@@ -745,42 +788,41 @@ def _(
     print("Personalized wellness agent built with profile support")
 
     # Step 5: Test with different users - they should get different advice
-    alice_config = {"configurable": {"thread_id": "alice_test_thread"}}
-    bob_config = {"configurable": {"thread_id": "bob_test_thread"}}
+    Chris_B_config = {"configurable": {"thread_id": "Chris_B_test_thread"}}
+    Chris_A_config = {"configurable": {"thread_id": "Chris_A_test_thread"}}
 
-    alice_response = profile_graph.invoke(
+    Chris_B_response = profile_graph.invoke(
         {
             "messages": [
                 HumanMessage(content="What exercises do you recommend for me?")
             ],
-            "user_id": "user_alice",
+            "user_id": "user_Chris_B",
         },
-        alice_config,
+        Chris_B_config,
     )
 
-    print("\n=== Alice's Response ===")
+    print("\n=== Chris_B's Response ===")
     print(
-        f"User (Alice, beginner with asthma): What exercises do you recommend for me?"
+        f"User (Chris_B, beginner with asthma): What exercises do you recommend for me?"
     )
-    print(f"Assistant: {alice_response['messages'][-1].content}")
+    print(f"Assistant: {Chris_B_response['messages'][-1].content}")
 
-    bob_response = profile_graph.invoke(
+    Chris_A_response = profile_graph.invoke(
         {
             "messages": [
                 HumanMessage(content="What exercises do you recommend for me?")
             ],
-            "user_id": "user_bob",
+            "user_id": "user_Chris_A",
         },
-        bob_config,
+        Chris_A_config,
     )
 
-    print("\n=== Bob's Response ===")
+    print("\n=== Chris_A's Response ===")
     print(
-        f"User (Bob, intermediate with high blood pressure): What exercises do you recommend for me?"
+        f"User (Chris_A, intermediate with high blood pressure): What exercises do you recommend for me?"
     )
-    print(f"Assistant: {bob_response['messages'][-1].content}")
-
-    return (profile_graph,)
+    print(f"Assistant: {Chris_A_response['messages'][-1].content}")
+    return
 
 
 @app.cell(hide_code=True)
@@ -827,7 +869,9 @@ def _(InMemoryStore):
 
     # Create embeddings model
     embeddings = OpenAIEmbeddings(
-        model="text-embedding-3-small", base_url="http://192.168.1.79:8080/v1"
+        model="text-embedding-nomic-embed-text-v2-moe",
+        base_url="http://192.168.1.79:8080/v1",
+        check_embedding_ctx_length=False,
     )
 
     # Create a store with semantic search enabled
@@ -850,7 +894,9 @@ def _(semantic_store):
     wellness_facts = [
         (
             "fact_1",
-            {"text": "Drinking water can help relieve headaches caused by dehydration"},
+            {
+                "text": "Drinking water can help relieve headaches caused by dehydration"
+            },
         ),
         (
             "fact_2",
@@ -878,7 +924,9 @@ def _(semantic_store):
         ),
         (
             "fact_6",
-            {"text": "Walking for 30 minutes daily can improve cardiovascular health"},
+            {
+                "text": "Walking for 30 minutes daily can improve cardiovascular health"
+            },
         ),
         (
             "fact_7",
@@ -941,7 +989,9 @@ def _():
     loader = TextLoader("data/HealthWellnessGuide.txt")
     documents = loader.load()
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500, chunk_overlap=100
+    )
     chunks = text_splitter.split_documents(documents)
 
     print(f"Loaded and split into {len(chunks)} chunks")
@@ -983,6 +1033,7 @@ def _(
         messages: Annotated[list, add_messages]
         user_id: str
 
+
     def semantic_wellness_chatbot(
         state: SemanticState, config: RunnableConfig, *, store: BaseStore
     ):
@@ -1002,13 +1053,16 @@ def _(
         _response = llm.invoke(messages)
         return {"messages": [_response]}
 
+
     builder3 = StateGraph(SemanticState)
     builder3.add_node(
         "chatbot", semantic_wellness_chatbot
     )  # Build context from retrieved knowledge
     builder3.add_edge(START, "chatbot")
     builder3.add_edge("chatbot", END)
-    semantic_graph = builder3.compile(checkpointer=MemorySaver(), store=semantic_store)
+    semantic_graph = builder3.compile(
+        checkpointer=MemorySaver(), store=semantic_store
+    )
     # Build and compile
     print("Semantic wellness chatbot ready")
     return (semantic_graph,)
@@ -1104,6 +1158,7 @@ def _(
     class EpisodicState(TypedDict):
         messages: Annotated[list, add_messages]
 
+
     def episodic_wellness_chatbot(
         state: EpisodicState, config: RunnableConfig, *, store: BaseStore
     ):
@@ -1113,20 +1168,27 @@ def _(
             ("agent", "episodes"), query=user_question, limit=1
         )
         if similar_episodes:
-            episode = similar_episodes[0].value  # Search for similar past experiences
+            episode = similar_episodes[
+                0
+            ].value  # Search for similar past experiences
             few_shot_example = f"Here's an example of a similar wellness question I handled well:\n\nUser asked: {episode['input']}\n\nMy response was:\n{episode['output']}\n\nThe user feedback was: {episode['feedback']}\n\nUse this as inspiration for the style, structure, and tone of your response, but tailor it to the current question."
             system_msg = f"You are a Personal Wellness Assistant. Learn from your past successes:\n\n{few_shot_example}"
         else:
             system_msg = "You are a Personal Wellness Assistant. Be helpful, specific, and supportive."
         messages = [SystemMessage(content=system_msg)] + state["messages"]
         _response = llm.invoke(messages)
-        return {"messages": [_response]}  # Build few-shot examples from past episodes
+        return {
+            "messages": [_response]
+        }  # Build few-shot examples from past episodes
+
 
     builder4 = StateGraph(EpisodicState)
     builder4.add_node("chatbot", episodic_wellness_chatbot)
     builder4.add_edge(START, "chatbot")
     builder4.add_edge("chatbot", END)
-    episodic_graph = builder4.compile(checkpointer=MemorySaver(), store=semantic_store)
+    episodic_graph = builder4.compile(
+        checkpointer=MemorySaver(), store=semantic_store
+    )
     # Build the episodic memory graph
     print("Episodic memory chatbot ready")
     return (episodic_graph,)
@@ -1147,7 +1209,9 @@ def _(HumanMessage, episodic_graph):
     )
     print("User: I want to exercise more but I have a bad hip. What can I do?")
     print(f"\nAssistant: {_response['messages'][-1].content}")
-    print("\nNotice: The response structure mirrors the successful knee pain episode!")
+    print(
+        "\nNotice: The response structure mirrors the successful knee pain episode!"
+    )
     return
 
 
@@ -1222,12 +1286,14 @@ def _(
         messages: Annotated[list, add_messages]
         feedback: str  # Optional feedback from user
 
+
     def get_instructions(store: BaseStore) -> tuple[str, int]:
         """Retrieve current instructions from procedural memory."""
         item = store.get(("agent", "instructions"), "wellness_assistant")
         if item is None:
             return ("You are a helpful wellness assistant.", 0)
         return (item.value["instructions"], item.value["version"])
+
 
     def procedural_assistant_node(
         state: ProceduralState, config: RunnableConfig, *, store: BaseStore
@@ -1237,6 +1303,7 @@ def _(
         messages = [SystemMessage(content=instructions)] + state["messages"]
         _response = llm.invoke(messages)
         return {"messages": [_response]}
+
 
     def reflection_node(
         state: ProceduralState, config: RunnableConfig, *, store: BaseStore
@@ -1257,11 +1324,13 @@ def _(
         print(f"\nInstructions updated to version {version + 1}")
         return {}  # Get current instructions
 
+
     def should_reflect(state: ProceduralState) -> str:
         """Decide whether to reflect on feedback."""  # Ask the LLM to reflect and improve instructions
         if state.get("feedback"):
             return "reflect"
         return "end"
+
 
     builder5 = StateGraph(ProceduralState)
     builder5.add_node("assistant", procedural_assistant_node)
@@ -1331,7 +1400,9 @@ def _(HumanMessage, procedural_graph, version):
     print(f"User: How can I sleep better?")
     print(f"\nAssistant (v{version} instructions - after feedback):")
     print(_response["messages"][-1].content)  # No feedback this time
-    print("\nNotice: The response should now be more concise based on the feedback!")
+    print(
+        "\nNotice: The response should now be more concise based on the feedback!"
+    )
     return
 
 
@@ -1391,13 +1462,16 @@ def _(
         user_id: str
         feedback: str
 
+
     def unified_wellness_assistant(
         state: UnifiedState, config: RunnableConfig, *, store: BaseStore
     ):
         """An assistant that uses all five memory types."""
         user_id = state["user_id"]
         user_message = state["messages"][-1].content
-        instructions_item = store.get(("agent", "instructions"), "wellness_assistant")
+        instructions_item = store.get(
+            ("agent", "instructions"), "wellness_assistant"
+        )
         base_instructions = (
             instructions_item.value["instructions"]
             if instructions_item
@@ -1416,7 +1490,9 @@ def _(
             ("wellness", "knowledge"), query=user_message, limit=2
         )
         knowledge_text = (
-            "\n".join([f"- {r.value['text'][:200]}..." for r in relevant_knowledge])
+            "\n".join(
+                [f"- {r.value['text'][:200]}..." for r in relevant_knowledge]
+            )
             if relevant_knowledge
             else "No specific knowledge found."
         )  # 2. LONG-TERM: Get user profile
@@ -1429,12 +1505,15 @@ def _(
         else:  # 3. SEMANTIC: Search for relevant knowledge
             episode_text = "No similar past interactions found."
         system_message = f"{base_instructions}\n\n=== USER PROFILE ===\n{profile_text}\n\n=== RELEVANT WELLNESS KNOWLEDGE ===\n{knowledge_text}\n\n=== LEARNING FROM EXPERIENCE ===\n{episode_text}\n\nUse all of this context to provide the best possible personalized response."
-        trimmed_messages = summarize_conversation(state["messages"], max_messages=6)
+        trimmed_messages = summarize_conversation(
+            state["messages"], max_messages=6
+        )
         messages = [
             SystemMessage(content=system_message)
         ] + trimmed_messages  # 4. EPISODIC: Find similar past interactions
         _response = llm.invoke(messages)
         return {"messages": [_response]}
+
 
     def unified_feedback_node(
         state: UnifiedState, config: RunnableConfig, *, store: BaseStore
@@ -1457,8 +1536,10 @@ def _(
         print(f"Procedural memory updated to v{current['version'] + 1}")
         return {}
 
+
     def unified_route(state: UnifiedState) -> str:
         return "feedback" if state.get("feedback") else "end"
+
 
     unified_builder = StateGraph(UnifiedState)
     unified_builder.add_node(
@@ -1487,7 +1568,9 @@ def _(HumanMessage, unified_graph):
     _response = unified_graph.invoke(
         {
             "messages": [
-                HumanMessage(content="What exercises would you recommend for my back?")
+                HumanMessage(
+                    content="What exercises would you recommend for my back?"
+                )
             ],
             "user_id": "user_sarah",
             "feedback": "",
@@ -1539,7 +1622,7 @@ def _(mo):
     - Privacy implications of storing interaction data
 
     ##### Answer:
-    *Your answer here*
+    *I don't think there's a silver bullet that exists, but we can store episodes when users give positive feedback, ask follow-up questions, or report progress. These signals show the advice was actually helpful. Keep metadata like timestamp, topic category, feedback score (if provided), engagement metrics (follow-up count, conversation duration), and anonymized user ID for privacy while avoiding any personal health details. This starts getting tricky the same way that bag of words lead to tf-idf, but neither solved the frequency-signal relationship.*
     """)
     return
 
@@ -1558,7 +1641,7 @@ def _(mo):
     - Namespace strategy for multi-agent systems
 
     ##### Answer:
-    *Your answer here*
+    *User profiles, semantic (relational) knowledge, episodic examples, and procedural instructions should likely be persistent in PostgreSQL. Keep short-term conversation context in-memory with a TTL, namespace by user_id for privacy and agent_type for specialist data.*
     """)
     return
 
@@ -1603,6 +1686,7 @@ def _(semantic_store):
         key = f"{date}_{metric_type}"
         store.put(namespace, key, {"value": value, "notes": notes, "date": date})
 
+
     def get_wellness_history(
         store, user_id: str, metric_type: str = None, days: int = 7
     ) -> list:
@@ -1615,6 +1699,7 @@ def _(semantic_store):
             filtered = all_metrics
         sorted_metrics = sorted(filtered, key=lambda x: x.key, reverse=True)
         return sorted_metrics[:days]
+
 
     # Step 2: Create sample wellness data for a user (simulate a week)
     test_user = "user_dashboard_test"
@@ -1635,6 +1720,7 @@ def _(semantic_store):
     #   - Uses episodic memory for what worked before
     #   - Generates a personalized summary
 
+
     def generate_wellness_summary(store, user_id: str) -> dict:
         """Generate a summary of wellness metrics."""
         history = get_wellness_history(store, user_id, days=7)
@@ -1643,7 +1729,9 @@ def _(semantic_store):
         sleep_vals = [m.value["value"] for m in history if "sleep" in m.key]
         summary = {
             "avg_mood": sum(mood_vals) / len(mood_vals) if mood_vals else 0,
-            "avg_energy": sum(energy_vals) / len(energy_vals) if energy_vals else 0,
+            "avg_energy": sum(energy_vals) / len(energy_vals)
+            if energy_vals
+            else 0,
             "avg_sleep": sum(sleep_vals) / len(sleep_vals) if sleep_vals else 0,
             "trend": "improving"
             if mood_vals and mood_vals[0] > mood_vals[-1]
@@ -1651,11 +1739,14 @@ def _(semantic_store):
         }
         return summary
 
+
     def wellness_dashboard(store, user_id: str, query: str) -> str:
         """Main dashboard function."""
         summary = generate_wellness_summary(store, user_id)
         relevant_advice = store.search(("wellness", "facts"), query=query, limit=2)
-        similar_episodes = store.search(("agent", "episodes"), query=query, limit=1)
+        similar_episodes = store.search(
+            ("agent", "episodes"), query=query, limit=1
+        )
 
         response = f"Wellness Summary for {user_id}:\n"
         response += f"- Average Mood: {summary['avg_mood']:.1f}/10\n"
@@ -1668,6 +1759,7 @@ def _(semantic_store):
 
         return response
 
+
     # Step 4: Test the dashboard
     print("\n" + "=" * 50)
     print("Test 1: Weekly Summary")
@@ -1678,7 +1770,9 @@ def _(semantic_store):
     print("Test 2: Tiredness Query")
     print("=" * 50)
     print(
-        wellness_dashboard(semantic_store, test_user, "I've been feeling tired lately")
+        wellness_dashboard(
+            semantic_store, test_user, "I've been feeling tired lately"
+        )
     )
     return
 
