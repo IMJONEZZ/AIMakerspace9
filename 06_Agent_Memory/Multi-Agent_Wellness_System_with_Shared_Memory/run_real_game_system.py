@@ -1054,9 +1054,7 @@ Use general advice and hints instead of specific answers."""
                 try:
                     vector = self.embeddings.embed_query(text_to_embed)
 
-                    point_id = (
-                        f"{self.current_game}_{timestamp.replace(':', '-')}_{idx}"
-                    )
+                    point_id = str(uuid4())
                     point = PointStruct(
                         id=point_id,
                         vector=vector,
