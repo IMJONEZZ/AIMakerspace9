@@ -972,7 +972,14 @@ Generate only the optimized search query, nothing else. Keep it concise but comp
                 response_content = (
                     response.content if hasattr(response, "content") else str(response)
                 )
-                filtered_content = str(response_content).strip()
+
+                # Handle different content types
+                if isinstance(response_content, list):
+                    filtered_content = " ".join(
+                        str(item) for item in response_content
+                    ).strip()
+                else:
+                    filtered_content = str(response_content).strip()
 
                 if self.verbose:
                     print(
@@ -1000,11 +1007,18 @@ Use general advice and hints instead of specific answers."""
                             HumanMessage(content=current_content),
                         ]
                         rephrase_response = self.llm.invoke(rephrase_messages)
-                        current_content = (
+                        rephrase_content = (
                             rephrase_response.content
                             if hasattr(rephrase_response, "content")
                             else str(rephrase_response)
-                        ).strip()
+                        )
+
+                        if isinstance(rephrase_content, list):
+                            current_content = " ".join(
+                                str(item) for item in rephrase_content
+                            ).strip()
+                        else:
+                            current_content = str(rephrase_content).strip()
                     else:
                         if self.verbose:
                             print(
@@ -1210,7 +1224,16 @@ Use general advice and hints instead of specific answers."""
             content = (
                 response.content if hasattr(response, "content") else str(response)
             )
-            raw_response = str(content)
+
+            # Handle different content types (list, string, etc.)
+            if isinstance(content, list):
+                raw_response = " ".join(str(item) for item in content)
+            else:
+                raw_response = str(content)
+
+            if self.verbose and len(raw_response) < 100:
+                print(f"[DEBUG] Raw response length: {len(raw_response)}")
+                print(f"[DEBUG] Raw response content: {raw_response[:200]}")
 
             # Extract reasoning and user-facing content
             reasoning, user_response = self.extract_reasoning_and_response(
@@ -1221,10 +1244,21 @@ Use general advice and hints instead of specific answers."""
             if self.verbose and reasoning:
                 print(f"\n[LLM REASONING]\n{reasoning}\n[/LLM REASONING]")
 
+            if self.verbose:
+                print(f"[DEBUG] User response length: {len(user_response)}")
+                print(f"[DEBUG] User response preview: {user_response[:300]}...")
+
             # Apply spoiler filtering to user response only
             filtered_response = self.filter_spoilers(
                 user_response, agent_type, sensitivity_override=spoiler_override
             )
+
+            if self.verbose:
+                print(f"[DEBUG] Filtered response length: {len(filtered_response)}")
+                if len(filtered_response) != len(user_response):
+                    print(
+                        f"[DEBUG] Response length changed during filtering: {len(user_response)} -> {len(filtered_response)}"
+                    )
 
             # Store conversation in memory system
             if self.memory_system:
@@ -1285,6 +1319,10 @@ Use general advice and hints instead of specific answers."""
 
         # Step 4: Display response
         print(f"\n[RESPONSE]\n{response}\n")
+        if self.verbose and len(response) < 200:
+            print(f"[DEBUG WARNING] Response seems short: {len(response)} characters")
+        elif self.verbose:
+            print(f"[DEBUG] Response length: {len(response)} characters")
 
     def run_interactive_session(self):
         """Run main interactive session."""
