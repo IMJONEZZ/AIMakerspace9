@@ -9,8 +9,14 @@ dependencies = [
     "langgraph",
     "langchain-core",
     "langchain-openai",
-    "langchain-community",
+    "langchain-community[docloaders]",
     "streamlit",
+    "qdrant-client",
+    "openai",
+    "httpx",
+    "aiohttp",
+    "pydantic",
+    "python-dotenv",
 ]
 
 [tool.hatch.build.targets.wheel]

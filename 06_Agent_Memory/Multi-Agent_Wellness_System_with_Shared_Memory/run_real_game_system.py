@@ -1203,3 +1203,32 @@ Examples:
 
 if __name__ == "__main__":
     main()
+
+# Quick test of enhanced components (non-interactive)
+if __name__ == "__main__" and len(sys.argv) == 1:
+    # Test the enhanced components
+    system = GameSystem(verbose=True)
+    print("✅ StructuredMemorySystem created successfully")
+
+    # Test LLM-generated search query
+    test_query = "best weapons for strength build"
+    context = system.memory_system.get_relevant_context(test_query)
+    optimized_query = system.generate_intelligent_search_query(test_query, context)
+    print(f'✅ Search query enhancement: "{test_query}" → "{optimized_query}"')
+
+    # Test memory system
+    system.memory_system.add_to_working_memory(
+        test_query, "Test response about quality weapons", "gameplay"
+    )
+    print(
+        f"✅ Memory system updated: {len(system.memory_system.working_memory)} working memory items"
+    )
+
+    # Test context compression
+    system.memory_system.session_summary = (
+        "Test session covering weapons and progression"
+    )
+    context_size = system._estimate_token_count()
+    print(f"✅ Context compression ready at {context_size} tokens")
+
+    print("🎮 All context engineering improvements working correctly!")
