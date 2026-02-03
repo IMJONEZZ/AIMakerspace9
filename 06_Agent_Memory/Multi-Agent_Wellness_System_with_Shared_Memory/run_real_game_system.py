@@ -1028,6 +1028,16 @@ Use general advice and hints instead of specific answers."""
         if not web_results:
             return
 
+        # Check if memory_system is initialized
+        if not self.memory_system or not hasattr(
+            self.memory_system, "semantic_collection"
+        ):
+            if self.verbose:
+                print(
+                    "[KNOWLEDGE UPDATE] Skipping web result embedding - memory system not initialized"
+                )
+            return
+
         try:
             from qdrant_client.http.models import PointStruct
             from datetime import datetime
@@ -1074,7 +1084,8 @@ Use general advice and hints instead of specific answers."""
 
             if points_to_upsert:
                 self.qdrant_client.upsert(
-                    collection_name=self.semantic_collection, points=points_to_upsert
+                    collection_name=self.memory_system.semantic_collection,
+                    points=points_to_upsert,
                 )
                 if self.verbose:
                     print(
