@@ -12,6 +12,7 @@ from langchain_core.messages import (
     SystemMessage,
     trim_messages,
 )
+from langchain_core.messages.utils import count_tokens_approximately
 from langchain_openai import ChatOpenAI
 
 
@@ -47,7 +48,7 @@ def trim_conversation(
     trimmer = trim_messages(
         max_tokens=max_tokens,
         strategy="last",
-        token_counter=llm,
+        token_counter=count_tokens_approximately,
         include_system=include_system,
         allow_partial=False,
     )
@@ -112,13 +113,13 @@ def summarize_conversation(
 
     # Split into old and recent
     old_messages = content_messages[: -max_messages + 1]
-    recent_messages = content_messages[-max_messages + 1:]
+    recent_messages = content_messages[-max_messages + 1 :]
 
     # Create summary of old messages
     summary_prompt = f"""Summarize this conversation history in 2-3 sentences,
 capturing the key topics discussed, any important decisions made, and user preferences revealed:
 
-{chr(10).join([f'{type(m).__name__.replace("Message", "")}: {m.content[:300]}{"..." if len(m.content) > 300 else ""}' for m in old_messages])}"""
+{chr(10).join([f"{type(m).__name__.replace('Message', '')}: {m.content[:300]}{'...' if len(m.content) > 300 else ''}" for m in old_messages])}"""
 
     summary_response = llm.invoke(summary_prompt)
     summary_text = f"{summary_prefix}: {summary_response.content}"
@@ -163,7 +164,16 @@ Topics:"""
     response = llm.invoke(prompt)
     topics = [t.strip().lower() for t in response.content.split(",")]
 
-    valid_topics = {"exercise", "nutrition", "sleep", "stress", "hydration", "habits", "mental_health", "general"}
+    valid_topics = {
+        "exercise",
+        "nutrition",
+        "sleep",
+        "stress",
+        "hydration",
+        "habits",
+        "mental_health",
+        "general",
+    }
     return [t for t in topics if t in valid_topics]
 
 
@@ -185,7 +195,9 @@ def format_profile_for_context(profile: dict) -> str:
             formatted = ", ".join([f"{k}: {v}" for k, v in value.items()])
             sections.append(f"- {key.replace('_', ' ').title()}: {formatted}")
         elif isinstance(value, list):
-            sections.append(f"- {key.replace('_', ' ').title()}: {', '.join(str(v) for v in value)}")
+            sections.append(
+                f"- {key.replace('_', ' ').title()}: {', '.join(str(v) for v in value)}"
+            )
         else:
             sections.append(f"- {key.replace('_', ' ').title()}: {value}")
 
@@ -227,6 +239,8 @@ def format_memory_context(
         for i, ep in enumerate(similar_episodes, 1):
             example = f"Example {i}:\n  User: {ep.get('input', 'N/A')}\n  Assistant: {ep.get('output', 'N/A')[:200]}..."
             examples.append(example)
-        context_parts.append(f"\n=== SUCCESSFUL PAST INTERACTIONS ===\n" + "\n".join(examples))
+        context_parts.append(
+            f"\n=== SUCCESSFUL PAST INTERACTIONS ===\n" + "\n".join(examples)
+        )
 
     return "\n".join(context_parts)
