@@ -234,15 +234,15 @@ class StructuredMemorySystem:
                     ]
                 )
 
-            search_results = self.qdrant_client.search(
+            search_results = self.qdrant_client.query_points(
                 collection_name=self.semantic_collection,
-                query_vector=query_vector,
+                query=query_vector,
                 query_filter=search_filter,
                 limit=limit,
             )
 
             entries = []
-            for result in search_results:
+            for result in search_results.points:
                 payload = result.payload
                 entry = MemoryEntry(
                     content=payload.get("content", ""),
@@ -699,8 +699,48 @@ class GameSystem:
 
         except Exception as e:
             if self.verbose:
-                print(f"[ERROR] Routing failed: {e}")
-            return "gameplay"  # fallback
+                print(f"[ROUTING ERROR] {e}")
+            return "gameplay"
+
+    def parse_spoiler_override(self, query: str) -> tuple[str, Optional[str]]:
+        """Parse spoiler sensitivity override from query.
+
+        Supports formats:
+        - "query --spoiler=high"
+        - "query --spoiler:medium"
+        - "[high] query"
+
+        Returns:
+            tuple of (cleaned_query, sensitivity_override)
+            sensitivity_override can be "high", "medium", "low", "none" or None
+        """
+        import re
+
+        sensitivity_override = None
+        cleaned_query = query.strip()
+
+        # Check for --spoiler= flag
+        spoiler_match = re.search(
+            r"--spoiler[=:](high|medium|low|none)", query, re.IGNORECASE
+        )
+        if spoiler_match:
+            sensitivity_override = spoiler_match.group(1).lower()
+            cleaned_query = re.sub(
+                r"--spoiler[=:](high|medium|low|none)", "", query, flags=re.IGNORECASE
+            )
+
+        # Check for [sensitivity] format
+        bracket_match = re.search(r"\[(high|medium|low|none)\]", query, re.IGNORECASE)
+        if bracket_match:
+            sensitivity_override = bracket_match.group(1).lower()
+            cleaned_query = re.sub(
+                r"\[(high|medium|low|none)\]", "", query, flags=re.IGNORECASE
+            )
+
+        # Clean up extra whitespace
+        cleaned_query = re.sub(r"\s+", " ", cleaned_query).strip()
+
+        return cleaned_query, sensitivity_override
 
     def generate_intelligent_search_query(
         self, user_query: str, agent_type: str
@@ -842,6 +882,10 @@ Generate only the optimized search query, nothing else. Keep it concise but comp
                 for i, result in enumerate(web_results[:2], 1):
                     print(f"  {i}. {result['title'][:50]}...")
 
+            # Embed and store web results for future retrieval
+            if results["web"]:
+                self.embed_and_store_web_results(results["web"], query, agent_type)
+
         except Exception as e:
             if self.verbose:
                 print(f"[WEB SEARCH ERROR] {e}")
@@ -884,50 +928,162 @@ Generate only the optimized search query, nothing else. Keep it concise but comp
 
         return results
 
-    def filter_spoilers(self, content: str, agent_type: str) -> str:
-        """Filter content based on spoiler sensitivity and game progress."""
+    def filter_spoilers(
+        self, content: str, agent_type: str, sensitivity_override: Optional[str] = None
+    ) -> str:
+        """Filter content based on spoiler sensitivity and game progress with iterative rephrasing."""
         if self.verbose:
             print(f"\n[SPOILER FILTER] Processing content for {agent_type}")
 
-        # Get user's spoiler sensitivity
-        sensitivity = (self.user_profile or {}).get("spoiler_sensitivity", "medium")
+        # Get user's spoiler sensitivity, with optional per-query override
+        sensitivity = sensitivity_override or (self.user_profile or {}).get(
+            "spoiler_sensitivity", "medium"
+        )
 
-        spoiler_filter_prompt = f"""You are a spoiler filter for game content. 
+        max_iterations = 2
+        current_content = content
+
+        for iteration in range(max_iterations):
+            spoiler_filter_prompt = f"""You are a spoiler filter for game content.
         User's spoiler sensitivity: {sensitivity}
         Content type: {agent_type}
         Game: {self.current_game}
-        
+
         Review this content and remove or mask any spoilers based on sensitivity level:
+        - None: Show all content without filtering
         - Low sensitivity: Allow most content, only remove major plot twists
-        - Medium sensitivity: Remove mid-game and late game spoilers  
+        - Medium sensitivity: Remove mid-game and late game spoilers
         - High sensitivity: Remove all potential spoilers, keep only basic info
-        
+
         Content to filter:
-        "{content}"
-        
-        Return filtered content (if too spoiled, say "This content contains spoilers for your current preferences"): """
+        "{current_content}"
+
+        Return filtered content. If the content contains spoilers that exceed the user's sensitivity level,
+        provide a spoiler-free version that still addresses their question as helpfully as possible without revealing
+        the sensitive information. Be creative in finding alternative ways to answer that avoid spoilers. """
+
+            try:
+                messages = [
+                    SystemMessage(content=spoiler_filter_prompt),
+                    HumanMessage(content=current_content),
+                ]
+
+                response = self.llm.invoke(messages)
+                response_content = (
+                    response.content if hasattr(response, "content") else str(response)
+                )
+                filtered_content = str(response_content).strip()
+
+                if self.verbose:
+                    print(
+                        f"[SPOILER FILTER] Iteration {iteration + 1}: Applied {sensitivity} sensitivity filter"
+                    )
+
+                # Check if content is still blocked
+                if "contains spoilers" in filtered_content.lower():
+                    if iteration < max_iterations - 1:
+                        if self.verbose:
+                            print(
+                                f"[SPOILER FILTER] Content blocked, attempting rephrase (iteration {iteration + 2})"
+                            )
+                        # Try to rephrase for next iteration
+                        rephrase_prompt = f"""The previous response was considered too spoiler-heavy. Please rewrite this content to be completely spoiler-free while still being helpful:
+
+Original question context: {agent_type} query about {self.current_game}
+Content to rephrase: "{current_content}"
+
+Focus on providing helpful guidance without revealing any plot points, specific character details, or location spoilers.
+Use general advice and hints instead of specific answers."""
+
+                        rephrase_messages = [
+                            SystemMessage(content=rephrase_prompt),
+                            HumanMessage(content=current_content),
+                        ]
+                        rephrase_response = self.llm.invoke(rephrase_messages)
+                        current_content = (
+                            rephrase_response.content
+                            if hasattr(rephrase_response, "content")
+                            else str(rephrase_response)
+                        ).strip()
+                    else:
+                        if self.verbose:
+                            print(
+                                "[SPOILER FILTER] Max iterations reached, returning filtered content"
+                            )
+                        return filtered_content
+                else:
+                    return filtered_content
+
+            except Exception as e:
+                if self.verbose:
+                    print(f"[SPOILER FILTER ERROR] {e}")
+                return current_content  # fallback to current iteration
+
+        return current_content
+
+    def embed_and_store_web_results(
+        self, web_results: List[Dict], query: str, agent_type: str
+    ):
+        """Embed web search results and store them in QDrant for future retrieval."""
+        if not web_results:
+            return
 
         try:
-            messages = [
-                SystemMessage(content=spoiler_filter_prompt),
-                HumanMessage(content=content),
-            ]
+            from qdrant_client.http.models import PointStruct
+            from datetime import datetime
 
-            response = self.llm.invoke(messages)
-            response_content = (
-                response.content if hasattr(response, "content") else str(response)
-            )
-            filtered_content = str(response_content).strip()
+            points_to_upsert = []
+            timestamp = datetime.now().isoformat()
 
-            if self.verbose:
-                print(f"[SPOILER FILTER] Applied {sensitivity} sensitivity filter")
+            for idx, result in enumerate(web_results[:3]):  # Store top 3 results
+                text_to_embed = (
+                    f"{result.get('title', '')}\n{result.get('content', '')}"
+                )
 
-            return filtered_content
+                # Create embedding
+                try:
+                    vector = self.embeddings.embed_query(text_to_embed)
+
+                    point_id = (
+                        f"{self.current_game}_{timestamp.replace(':', '-')}_{idx}"
+                    )
+                    point = PointStruct(
+                        id=point_id,
+                        vector=vector,
+                        payload={
+                            "text": text_to_embed,
+                            "title": result.get("title", ""),
+                            "url": result.get("url", ""),
+                            "source": "web_search",
+                            "game_context": self.current_game,
+                            "agent_type": agent_type,
+                            "query": query,
+                            "timestamp": timestamp,
+                            "entry_type": "web_result",
+                            "importance": 0.6,
+                        },
+                    )
+                    points_to_upsert.append(point)
+
+                except Exception as embed_error:
+                    if self.verbose:
+                        print(
+                            f"[EMBED ERROR] Failed to embed result {idx}: {embed_error}"
+                        )
+                    continue
+
+            if points_to_upsert:
+                self.qdrant_client.upsert(
+                    collection_name=self.semantic_collection, points=points_to_upsert
+                )
+                if self.verbose:
+                    print(
+                        f"[KNOWLEDGE UPDATE] Embedded {len(points_to_upsert)} web results into QDrant"
+                    )
 
         except Exception as e:
             if self.verbose:
-                print(f"[SPOILER FILTER ERROR] {e}")
-            return content  # fallback to original
+                print(f"[KNOWLEDGE UPDATE ERROR] {e}")
 
     def extract_reasoning_and_response(self, llm_content: str) -> tuple[str, str]:
         """Extract reasoning content from LLM response and separate from user-facing content.
@@ -967,7 +1123,11 @@ Generate only the optimized search query, nothing else. Keep it concise but comp
         return "", llm_content
 
     def synthesize_response(
-        self, query: str, agent_type: str, search_results: Dict
+        self,
+        query: str,
+        agent_type: str,
+        search_results: Dict,
+        spoiler_override: Optional[str] = None,
     ) -> str:
         """Synthesize a response using search results, memory context, and progressive context compression."""
         if self.verbose:
@@ -1053,7 +1213,9 @@ Generate only the optimized search query, nothing else. Keep it concise but comp
                 print(f"\n[LLM REASONING]\n{reasoning}\n[/LLM REASONING]")
 
             # Apply spoiler filtering to user response only
-            filtered_response = self.filter_spoilers(user_response, agent_type)
+            filtered_response = self.filter_spoilers(
+                user_response, agent_type, sensitivity_override=spoiler_override
+            )
 
             # Store conversation in memory system
             if self.memory_system:
@@ -1092,18 +1254,25 @@ Generate only the optimized search query, nothing else. Keep it concise but comp
 
     def process_user_query(self, query: str):
         """Process a user query through the complete pipeline."""
+        # Parse spoiler sensitivity override
+        cleaned_query, spoiler_override = self.parse_spoiler_override(query)
+
         print(f"\n{'=' * 60}")
-        print(f"PROCESSING QUERY: {query}")
+        print(f"PROCESSING QUERY: {cleaned_query}")
+        if spoiler_override:
+            print(f"SPOILER OVERRIDE: {spoiler_override.upper()}")
         print("=" * 60)
 
         # Step 1: Route to agent
-        agent_type = self.route_query_to_agent(query)
+        agent_type = self.route_query_to_agent(cleaned_query)
 
         # Step 2: Search for information
-        search_results = self.search_web_and_knowledge(query)
+        search_results = self.search_web_and_knowledge(cleaned_query)
 
         # Step 3: Synthesize and filter response
-        response = self.synthesize_response(query, agent_type, search_results)
+        response = self.synthesize_response(
+            cleaned_query, agent_type, search_results, spoiler_override=spoiler_override
+        )
 
         # Step 4: Display response
         print(f"\n[RESPONSE]\n{response}\n")
