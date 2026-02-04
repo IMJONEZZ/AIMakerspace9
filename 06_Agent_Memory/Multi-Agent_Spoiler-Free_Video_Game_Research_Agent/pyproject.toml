@@ -1,0 +1,27 @@
+[project]
+name = "multi-agent-wellness-system"
+version = "0.1.0"
+description = "Multi-Agent Wellness System with Shared Memory using LangGraph"
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "langgraph",
+    "langchain-core",
+    "langchain-openai",
+    "langchain-community[docloaders]",
+    "streamlit",
+    "qdrant-client",
+    "openai",
+    "httpx",
+    "aiohttp",
+    "pydantic",
+    "python-dotenv",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
