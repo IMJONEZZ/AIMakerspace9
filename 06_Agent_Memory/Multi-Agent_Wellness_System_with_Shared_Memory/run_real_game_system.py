@@ -1295,6 +1295,31 @@ Use general advice and hints instead of specific answers."""
                 print(f"[SYNTHESIS ERROR] {e}")
             return "I'm having trouble creating a response right now. Please try again."
 
+    def show_help(self):
+        """Show help information about available commands and spoiler overrides."""
+        print("\n" + "=" * 60)
+        print("HELP")
+        print("=" * 60)
+        print("\nCommands:")
+        print("  'quit' - Exit the session")
+        print("  'change game' - Select a different game to ask about")
+        print("  'help' or '?' - Show this help message")
+        print("\nSpoiler Sensitivity Override (per-query):")
+        print("  Your default spoiler sensitivity is set in your profile, but you can")
+        print("  override it for specific queries using these formats:")
+        print("\n  Format 1: --spoiler flag")
+        print("    'How do I beat the final boss? --spoiler=none'")
+        print("    'What areas unlock next? --spoiler:medium'")
+        print("\n  Format 2: [sensitivity] bracket notation")
+        print("    '[low] What weapons should I use?'")
+        print("    '[high] Who are the main villains?'\n")
+        print("\nSensitivity Levels:")
+        print("  none    - Show all content without any filtering")
+        print("  low     - Allow most content, only block major plot twists")
+        print("  medium  - Remove mid-game and late game spoilers (default)")
+        print("  high    - Block all potential spoilers, keep only basic info\n")
+        print("=" * 60)
+
     def process_user_query(self, query: str):
         """Process a user query through the complete pipeline."""
         # Parse spoiler sensitivity override
@@ -1330,7 +1355,10 @@ Use general advice and hints instead of specific answers."""
         print("INTERACTIVE GAME ASSISTANCE")
         print("=" * 60)
         print("Ask me anything about your selected game!")
-        print("Type 'quit' to exit, 'change game' to select a different game")
+        print("\nAvailable Commands:")
+        print("  Type 'help' or '?' for detailed assistance")
+        print("  Type 'quit' to exit the session")
+        print("  Type 'change game' to select a different game\n")
 
         while True:
             try:
@@ -1345,6 +1373,9 @@ Use general advice and hints instead of specific answers."""
                     break
                 elif query.lower() == "change game":
                     self.determine_current_game()
+                    continue
+                elif query.lower() == "help" or query.lower() == "?":
+                    self.show_help()
                     continue
 
                 # Process query
