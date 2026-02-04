@@ -9,7 +9,7 @@
 
 | Session Sheet | Recording     | Slides        | Repo         | Homework      | Feedback       |
 |:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|
-|[Deep Agents](https://github.com/AI-Maker-Space/AIE9/blob/main/00_Docs/Session_Sheets/07_Deep_Agents.md) | Coming soon! | Coming soon! | You are here! | Coming soon! | Coming soon! |
+| [Deep Agents](https://github.com/AI-Maker-Space/AIE9/blob/main/00_Docs/Session_Sheets/07_Deep_Agents.md) |[Recording!](https://us02web.zoom.us/rec/share/I__BI6_mDP_YYk0beYkS5SAaURg9VZ5k_dC5K_OLEkzHbPca9McefKJlhhwitsQN.0vXRPsAywWyFE0RJ) <br> passcode: `iBt9a&Mi`| [Session 7 Slides](https://www.canva.com/design/DAHAT1jy3nk/ZfmYrrdT2mL10GetpfRDnw/edit?utm_content=DAHAT1jy3nk&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | You are here! | [Session 7 Assignment: Deep Agents](https://forms.gle/95UFWAzLTYzr7cj4A) <br><br> [Project Ideation](https://forms.gle/nnCEmnZUBKtbThB78) | [Feedback 2/3](https://forms.gle/MbrAjqYFwCpJgYEB8) |
 
 
 ### Outline:
