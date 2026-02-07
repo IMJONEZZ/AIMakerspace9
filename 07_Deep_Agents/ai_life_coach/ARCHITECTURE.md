@@ -1,7 +1,25 @@
-# Architecture Quick Reference
+# AI Life Coach Architecture Documentation
 
 ## System Overview
-The AI Life Coach is a **Deep Agent** system that orchestrates 4 domain specialists through a central coordinator, using planning, context management, and persistent memory to provide comprehensive life guidance.
+
+The AI Life Coach is a sophisticated **Deep Agent** system that orchestrates 4 domain specialists through a central coordinator, using planning, context management, and persistent memory to provide comprehensive life guidance across Career, Relationships, Finance, and Wellness domains.
+
+### Architecture Philosophy
+
+- **Holistic Integration**: All life domains are interconnected; decisions in one area affect others
+- **Specialized Expertise**: Each domain has dedicated specialists with deep knowledge
+- **Adaptive Planning**: Plans evolve based on progress, changing circumstances, and new insights
+- **Long-Term Memory**: Coaching relationships persist across sessions with full context retention
+- **Multi-User Support**: Complete data isolation and session management for multiple users
+
+### Core Technologies
+
+- **Deep Agents Framework**: Multi-agent orchestration and coordination
+- **LangGraph**: Memory management with persistent InMemoryStore
+- **LangChain**: Tool integration and agent communication
+- **GLM-4.7**: Local LLM with OpenAI-compatible interface
+- **FilesystemBackend**: Persistent document and plan storage
+- **Phase-Based Planning**: Discovery → Planning → Execution → Review workflow
 
 ---
 
