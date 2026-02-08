@@ -55,7 +55,7 @@ from rich.columns import Columns
 from rich.layout import Layout
 from rich.align import Align
 from rich.live import Live
-from rich.spinner import Spinner, DOTS
+from rich.spinner import Spinner
 import time
 
 # Configure logging
@@ -396,7 +396,7 @@ class TUIRenderer:
 
     def show_typing_indicator(self):
         """Display a typing indicator while coach is processing."""
-        spinner = Spinner(DOTS, text=" Coach is thinking...", style=self.colors.BRIGHT_BLUE)
+        spinner = Spinner("dots", text=" Coach is thinking...", style=self.colors.BRIGHT_BLUE)
         self.console.print(spinner)
         return spinner
 
@@ -424,7 +424,7 @@ class TUIRenderer:
             except:
                 duration_str = "Unknown"
         else:
-            duration_str = N / A
+            duration_str = "N/A"
 
         # Create statistics table
         stats_table = Table(
