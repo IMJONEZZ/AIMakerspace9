@@ -302,18 +302,18 @@ class TUIRenderer:
 
         # Build welcome panel
         content = Text()
-        content.append(logo, style=f"bold {self.colors.FG0}")
+        content.append(logo)
         content.append("\n\n")
-        content.append(subtitle, style=subtitle_style)
+        content.append(Text(subtitle, style=subtitle_style))
         content.append("\n\n")
 
         # Session details
         session_info = Text()
         session_info.append(Text("📅 ", style=self.colors.BRIGHT_YELLOW))
-        session_info.append(date_str, style=self.colors.FG1)
+        session_info.append(Text(date_str, style=self.colors.FG1))
         session_info.append(Text("  •  ", style=self.colors.BG4))
         session_info.append(Text("🕐 ", style=self.colors.BRIGHT_YELLOW))
-        session_info.append(time_str, style=self.colors.FG1)
+        session_info.append(Text(time_str, style=self.colors.FG1))
 
         content.append(session_info)
 
@@ -363,7 +363,7 @@ class TUIRenderer:
             prefix = Text()
             prefix.append(Text("You", style=f"bold {self.colors.BRIGHT_GREEN}"))
             if time_str:
-                prefix.append(f" · {time_str}", style=self.colors.FG4)
+                prefix.append(Text(f" · {time_str}", style=self.colors.FG4))
 
             # Create right-aligned panel
             message = Text(content, style=self.colors.FG1)
@@ -379,7 +379,7 @@ class TUIRenderer:
             prefix = Text()
             prefix.append(Text("Coach", style=f"bold {self.colors.BRIGHT_BLUE}"))
             if time_str:
-                prefix.append(f" · {time_str}", style=self.colors.FG4)
+                prefix.append(Text(f" · {time_str}", style=self.colors.FG4))
 
             # Create left-aligned panel
             message = Text(content, style=self.colors.FG1)
@@ -558,7 +558,7 @@ class TUIRenderer:
         """Print an error message with Gruvbox red styling."""
         error_text = Text()
         error_text.append(Text("❌ ", style=self.colors.BRIGHT_RED))
-        error_text.append(message, style=self.colors.FG1)
+        error_text.append(Text(message, style=self.colors.FG1))
 
         panel = Panel(
             error_text,
@@ -572,7 +572,7 @@ class TUIRenderer:
         """Print a success message with Gruvbox green styling."""
         success_text = Text()
         success_text.append(Text("✅ ", style=self.colors.BRIGHT_GREEN))
-        success_text.append(message, style=self.colors.FG1)
+        success_text.append(Text(message, style=self.colors.FG1))
 
         panel = Panel(
             success_text,
@@ -657,9 +657,9 @@ class TUIRenderer:
         # Create summary text
         summary = Text()
         summary.append(Text("Session Complete", style=f"bold {self.colors.FG0}"))
-        summary.append(f"\n\nTotal exchanges: ", style=self.colors.FG2)
-        summary.append(str(total_exchanges), style=f"bold {self.colors.BRIGHT_GREEN}")
-        summary.append(f"\n\nProgress saved. Come back anytime!", style=self.colors.FG2)
+        summary.append(Text(f"\n\nTotal exchanges: ", style=self.colors.FG2))
+        summary.append(Text(str(total_exchanges), style=f"bold {self.colors.BRIGHT_GREEN}"))
+        summary.append(Text(f"\n\nProgress saved. Come back anytime!", style=self.colors.FG2))
 
         # Create panel
         panel = Panel(
