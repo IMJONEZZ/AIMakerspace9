@@ -284,8 +284,8 @@ class TUIRenderer:
 
         # Create logo banner
         logo = Text()
-        logo.append("🧠 ", style=f"bold {self.colors.BRIGHT_GREEN}")
-        logo.append("AI Life Coach", style=f"bold {self.colors.FG0}")
+        logo.append(Text("🧠 ", style=f"bold {self.colors.BRIGHT_GREEN}"))
+        logo.append(Text("AI Life Coach", style=f"bold {self.colors.FG0}"))
 
         # Welcome message
         if is_new_user:
@@ -309,22 +309,22 @@ class TUIRenderer:
 
         # Session details
         session_info = Text()
-        session_info.append("📅 ", style=self.colors.BRIGHT_YELLOW)
+        session_info.append(Text("📅 ", style=self.colors.BRIGHT_YELLOW))
         session_info.append(date_str, style=self.colors.FG1)
-        session_info.append("  •  ", style=self.colors.BG4)
-        session_info.append("🕐 ", style=self.colors.BRIGHT_YELLOW)
+        session_info.append(Text("  •  ", style=self.colors.BG4))
+        session_info.append(Text("🕐 ", style=self.colors.BRIGHT_YELLOW))
         session_info.append(time_str, style=self.colors.FG1)
 
         content.append(session_info)
 
         # Tips panel
         tips = Text()
-        tips.append("\n\nQuick Tips:\n", style=f"bold {self.colors.BRIGHT_BLUE}")
-        tips.append("• Type your message to chat with the coach\n", style=self.colors.FG2)
-        tips.append("• Use ", style=self.colors.FG3)
-        tips.append("/help", style=f"bold {self.colors.BRIGHT_ORANGE}")
-        tips.append(" for commands\n", style=self.colors.FG3)
-        tips.append("• All conversations are saved automatically\n", style=self.colors.FG2)
+        tips.append(Text("\n\nQuick Tips:\n", style=f"bold {self.colors.BRIGHT_BLUE}"))
+        tips.append(Text("• Type your message to chat with the coach\n", style=self.colors.FG2))
+        tips.append(Text("• Use ", style=self.colors.FG3))
+        tips.append(Text("/help", style=f"bold {self.colors.BRIGHT_ORANGE}"))
+        tips.append(Text(" for commands\n", style=self.colors.FG3))
+        tips.append(Text("• All conversations are saved automatically\n", style=self.colors.FG2))
 
         content.append(tips)
 
@@ -361,7 +361,7 @@ class TUIRenderer:
         if role == "user":
             # User message - right-aligned, green accent
             prefix = Text()
-            prefix.append("You", style=f"bold {self.colors.BRIGHT_GREEN}")
+            prefix.append(Text("You", style=f"bold {self.colors.BRIGHT_GREEN}"))
             if time_str:
                 prefix.append(f" · {time_str}", style=self.colors.FG4)
 
@@ -377,7 +377,7 @@ class TUIRenderer:
         else:
             # Coach message - left-aligned, blue/cyan accent
             prefix = Text()
-            prefix.append("Coach", style=f"bold {self.colors.BRIGHT_BLUE}")
+            prefix.append(Text("Coach", style=f"bold {self.colors.BRIGHT_BLUE}"))
             if time_str:
                 prefix.append(f" · {time_str}", style=self.colors.FG4)
 
@@ -469,7 +469,7 @@ class TUIRenderer:
 
         # Last save indicator
         last_save = Text()
-        last_save.append("💾 ", style=self.colors.BRIGHT_AQUA)
+        last_save.append(Text("💾 ", style=self.colors.BRIGHT_AQUA))
         if last_accessed_str:
             try:
                 accessed = datetime.fromisoformat(last_accessed_str)
@@ -478,9 +478,9 @@ class TUIRenderer:
                     style=self.colors.FG3,
                 )
             except:
-                last_save.append("Last saved: Unknown", style=self.colors.FG3)
+                last_save.append(Text("Last saved: Unknown", style=self.colors.FG3))
         else:
-            last_save.append("Session not saved yet", style=self.colors.FG4)
+            last_save.append(Text("Session not saved yet", style=self.colors.FG4))
 
         # Combine into columns
         dashboard = Columns(
@@ -557,7 +557,7 @@ class TUIRenderer:
     def print_error(self, message: str):
         """Print an error message with Gruvbox red styling."""
         error_text = Text()
-        error_text.append("❌ ", style=self.colors.BRIGHT_RED)
+        error_text.append(Text("❌ ", style=self.colors.BRIGHT_RED))
         error_text.append(message, style=self.colors.FG1)
 
         panel = Panel(
@@ -571,7 +571,7 @@ class TUIRenderer:
     def print_success(self, message: str):
         """Print a success message with Gruvbox green styling."""
         success_text = Text()
-        success_text.append("✅ ", style=self.colors.BRIGHT_GREEN)
+        success_text.append(Text("✅ ", style=self.colors.BRIGHT_GREEN))
         success_text.append(message, style=self.colors.FG1)
 
         panel = Panel(
@@ -595,7 +595,7 @@ class TUIRenderer:
             TextColumn("[progress.description]{task.description}"),
             BarColumn(bar_width=40, style=self.colors.BRIGHT_AQUA),
             TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            TimeElapsedColumn(style=self.colors.FG4),
+            TimeElapsedColumn(),
         ) as progress:
             task = progress.add_task("Exporting report...", total=100)
 
@@ -623,18 +623,18 @@ class TUIRenderer:
 
         # Connection indicator
         if is_connected:
-            status_text.append("●", style=self.colors.BRIGHT_GREEN)
-            status_text.append(" Connected", style=f"bold {self.colors.FG1}")
+            status_text.append(Text("●", style=self.colors.BRIGHT_GREEN))
+            status_text.append(Text(" Connected", style=f"bold {self.colors.FG1}"))
         else:
-            status_text.append("●", style=self.colors.NEUTRAL_RED)
-            status_text.append(" Disconnected", style=f"bold {self.colors.FG4}")
+            status_text.append(Text("●", style=self.colors.NEUTRAL_RED))
+            status_text.append(Text(" Disconnected", style=f"bold {self.colors.FG4}"))
 
         # Add separator
-        status_text.append("  │  ", style=self.colors.BG4)
+        status_text.append(Text("  │  ", style=self.colors.BG4))
 
         # Auto-save indicator
-        status_text.append("💾 ", style=self.colors.BRIGHT_AQUA)
-        status_text.append("Auto-save enabled", style=f"bold {self.colors.FG1}")
+        status_text.append(Text("💾 ", style=self.colors.BRIGHT_AQUA))
+        status_text.append(Text("Auto-save enabled", style=f"bold {self.colors.FG1}"))
 
         # Create status bar panel
         status_panel = Panel(
@@ -656,7 +656,7 @@ class TUIRenderer:
 
         # Create summary text
         summary = Text()
-        summary.append("Session Complete", style=f"bold {self.colors.FG0}")
+        summary.append(Text("Session Complete", style=f"bold {self.colors.FG0}"))
         summary.append(f"\n\nTotal exchanges: ", style=self.colors.FG2)
         summary.append(str(total_exchanges), style=f"bold {self.colors.BRIGHT_GREEN}")
         summary.append(f"\n\nProgress saved. Come back anytime!", style=self.colors.FG2)
