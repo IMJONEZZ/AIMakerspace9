@@ -25,29 +25,30 @@ from langchain_core.tools import (
     tool,
 )
 from langchain_mcp_adapters.client import MultiServerMCPClient
+from langchain_community.utilities import SearxSearchWrapper
 from langgraph.config import get_store
 from mcp import McpError
-from tavily import AsyncTavilyClient
 
 from open_deep_research.configuration import Configuration, SearchAPI
 from open_deep_research.prompts import summarize_webpage_prompt
 from open_deep_research.state import ResearchComplete, Summary
 
 ##########################
-# Tavily Search Tool Utils
+# SearxNG Search Tool Utils
 ##########################
-TAVILY_SEARCH_DESCRIPTION = (
+SEARXNG_SEARCH_DESCRIPTION = (
     "A search engine optimized for comprehensive, accurate, and trusted results. "
     "Useful for when you need to answer questions about current events."
 )
-@tool(description=TAVILY_SEARCH_DESCRIPTION)
-async def tavily_search(
+
+@tool(description=SEARXNG_SEARCH_DESCRIPTION)
+async def searxng_search(
     queries: List[str],
     max_results: Annotated[int, InjectedToolArg] = 5,
     topic: Annotated[Literal["general", "news", "finance"], InjectedToolArg] = "general",
     config: RunnableConfig = None
 ) -> str:
-    """Fetch and summarize search results from Tavily search API.
+    """Fetch and summarize search results from SearxNG search API.
 
     Args:
         queries: List of search queries to execute
@@ -59,11 +60,10 @@ async def tavily_search(
         Formatted string containing summarized search results
     """
     # Step 1: Execute search queries asynchronously
-    search_results = await tavily_search_async(
+    search_results = await searxng_search_async(
         queries,
         max_results=max_results,
         topic=topic,
-        include_raw_content=True,
         config=config
     )
     
@@ -87,7 +87,8 @@ async def tavily_search(
         model=configurable.summarization_model,
         max_tokens=configurable.summarization_model_max_tokens,
         api_key=model_api_key,
-        tags=["langsmith:nostream"]
+        base_url=configurable.lmstudio_base_url if configurable.summarization_model.startswith("openai:") else None,
+        tags=["open_source:nostream"]
     ).with_structured_output(Summary).with_retry(
         stop_after_attempt=configurable.max_structured_output_retries
     )
@@ -98,10 +99,10 @@ async def tavily_search(
         return None
     
     summarization_tasks = [
-        noop() if not result.get("raw_content") 
+        noop() if not result.get("content") 
         else summarize_webpage(
             summarization_model, 
-            result['raw_content'][:max_char_to_include]
+            result['content'][:max_char_to_include]
         )
         for result in unique_results.values()
     ]
@@ -135,41 +136,60 @@ async def tavily_search(
     
     return formatted_output
 
-async def tavily_search_async(
-    search_queries, 
+async def searxng_search_async(
+    search_queries: List[str], 
     max_results: int = 5, 
     topic: Literal["general", "news", "finance"] = "general", 
-    include_raw_content: bool = True, 
     config: RunnableConfig = None
 ):
-    """Execute multiple Tavily search queries asynchronously.
+    """Execute multiple SearxNG search queries asynchronously.
     
     Args:
         search_queries: List of search query strings to execute
         max_results: Maximum number of results per query
         topic: Topic category for filtering results
-        include_raw_content: Whether to include full webpage content
         config: Runtime configuration for API key access
         
     Returns:
-        List of search result dictionaries from Tavily API
+        List of search result dictionaries from SearxNG API
     """
-    # Initialize the Tavily client with API key from config
-    tavily_client = AsyncTavilyClient(api_key=get_tavily_api_key(config))
+    # Get configuration
+    configurable = Configuration.from_runnable_config(config)
+    searxng_host = configurable.searxng_host
+    
+    # Initialize the SearxNG wrapper
+    searx_wrapper = SearxSearchWrapper(searx_host=searxng_host)
     
     # Create search tasks for parallel execution
-    search_tasks = [
-        tavily_client.search(
-            query,
-            max_results=max_results,
-            include_raw_content=include_raw_content,
-            topic=topic
+    search_tasks = []
+    for query in search_queries:
+        # Use the wrapper's arun method for async search
+        # Note: SearxSearchWrapper doesn't have native async, so we run in executor
+        search_tasks.append(
+            asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda q=query: searx_wrapper.results(q, num_results=max_results)
+            )
         )
-        for query in search_queries
-    ]
     
     # Execute all search queries in parallel and return results
-    search_results = await asyncio.gather(*search_tasks)
+    search_results_raw = await asyncio.gather(*search_tasks)
+    
+    # Format results to match expected structure
+    search_results = []
+    for query, results in zip(search_queries, search_results_raw):
+        formatted_results = []
+        for result in results:
+            formatted_results.append({
+                'title': result.get('title', ''),
+                'url': result.get('link', ''),
+                'content': result.get('snippet', '')
+            })
+        search_results.append({
+            'query': query,
+            'results': formatted_results
+        })
+    
     return search_results
 
 async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
@@ -192,7 +212,7 @@ async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
         # Execute summarization with timeout to prevent hanging
         summary = await asyncio.wait_for(
             model.ainvoke([HumanMessage(content=prompt_content)]),
-            timeout=60.0  # 60 second timeout for summarization
+            timeout=100000.0  # 100,000 second timeout for summarization (~27.7 hours)
         )
         
         # Format the summary with structured sections
@@ -205,7 +225,7 @@ async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
         
     except asyncio.TimeoutError:
         # Timeout during summarization - return original content
-        logging.warning("Summarization timed out after 60 seconds, returning original content")
+        logging.warning("Summarization timed out after 100000 seconds, returning original content")
         return webpage_content
     except Exception as e:
         # Other errors during summarization - log and return original content
@@ -549,12 +569,22 @@ async def get_search_tool(search_api: SearchAPI):
         # OpenAI's web search preview functionality
         return [{"type": "web_search_preview"}]
         
+    elif search_api == SearchAPI.SEARXNG:
+        # Configure SearxNG search tool with metadata
+        search_tool = searxng_search
+        search_tool.metadata = {
+            **(search_tool.metadata or {}),
+            "type": "search",
+            "name": "web_search"
+        }
+        return [search_tool]
+
     elif search_api == SearchAPI.TAVILY:
         # Configure Tavily search tool with metadata
-        search_tool = tavily_search
+        search_tool = searxng_search  # Fallback to SearxNG for now
         search_tool.metadata = {
-            **(search_tool.metadata or {}), 
-            "type": "search", 
+            **(search_tool.metadata or {}),
+            "type": "search",
             "name": "web_search"
         }
         return [search_tool]
@@ -892,7 +922,13 @@ def get_config_value(value):
 def get_api_key_for_model(model_name: str, config: RunnableConfig):
     """Get API key for a specific model from environment or config."""
     should_get_from_config = os.getenv("GET_API_KEYS_FROM_CONFIG", "false")
+    configurable = Configuration.from_runnable_config(config)
     model_name = model_name.lower()
+    
+    # For LMStudio models, use the configured API key (typically empty for local instances)
+    if model_name.startswith("openai:") and configurable.lmstudio_base_url:
+        return configurable.lmstudio_api_key or None
+    
     if should_get_from_config.lower() == "true":
         api_keys = config.get("configurable", {}).get("apiKeys", {})
         if not api_keys:
@@ -914,12 +950,9 @@ def get_api_key_for_model(model_name: str, config: RunnableConfig):
         return None
 
 def get_tavily_api_key(config: RunnableConfig):
-    """Get Tavily API key from environment or config."""
-    should_get_from_config = os.getenv("GET_API_KEYS_FROM_CONFIG", "false")
-    if should_get_from_config.lower() == "true":
-        api_keys = config.get("configurable", {}).get("apiKeys", {})
-        if not api_keys:
-            return None
-        return api_keys.get("TAVILY_API_KEY")
-    else:
-        return os.getenv("TAVILY_API_KEY")
+    """Get Tavily API key from environment or config.
+    
+    Note: This function is deprecated. SearxNG is used instead and does not require an API key.
+    """
+    # SearxNG does not require an API key for self-hosted instances
+    return None

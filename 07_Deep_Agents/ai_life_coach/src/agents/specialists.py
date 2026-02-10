@@ -17,7 +17,7 @@ Based on Deep Agents subagent spawning best practices:
 https://docs.langchain.com/oss/python/deepagents/subagents
 """
 
-from typing import List, Any
+from typing import Any, List
 
 
 def get_all_specialists() -> tuple[dict[str, Any], ...]:

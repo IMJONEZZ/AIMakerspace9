@@ -10,19 +10,20 @@ Tests all components without requiring user input:
 5. QDrant read/write operations
 """
 
-import sys
 import os
+import sys
 from datetime import datetime
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import Distance, VectorParams, PointStruct
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_core.messages import HumanMessage, SystemMessage
-import httpx
 from uuid import uuid4
+
+import httpx
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Distance, PointStruct, VectorParams
 
 
 class RealGameSystemTest:
@@ -50,7 +51,7 @@ class RealGameSystemTest:
         os.environ["OPENAI_API_KEY"] = "not-needed"
 
         self.llm = ChatOpenAI(
-            model="glm-4.7",
+            model="openai/gpt-oss-120b",
             base_url="http://192.168.1.79:8080/v1",
             api_key="not-needed",
             temperature=0.1,
@@ -123,7 +124,7 @@ class RealGameSystemTest:
             print("SUCCESS: Stored test user profile")
 
             # Now read it back
-            from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+            from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
             results = self.qdrant_client.scroll(
                 collection_name="user_game_progress",
@@ -258,7 +259,7 @@ class RealGameSystemTest:
             print("SUCCESS: Wrote content to QDrant")
 
             # Test read
-            from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+            from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
             search_results = self.qdrant_client.search(
                 collection_name="game_knowledge_base",

@@ -779,7 +779,7 @@ Prepare and deliver final demonstration.
 | Orchestration | LangGraph |
 | Memory Store | InMemoryStore (LangGraph) |
 | Context Backend | FilesystemBackend |
-| Model Provider | GLM-4.7 (local endpoint) |
+| Model Provider | glm-4.7 (local endpoint) |
 | Planning System | Built-in TodoListMiddleware |
 | Skills System | SKILL.md progressive disclosure |
 

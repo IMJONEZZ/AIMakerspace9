@@ -12,13 +12,13 @@ All agents use:
 - GameKnowledgeBase for retrieving walkthrough/lore information
 """
 
-from typing import Optional, List
+from typing import List, Optional
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from .game_input_flow import GameInputFlow
-from .user_game_progress import UserGameProgress, PROGRESS_MARKERS
 from .game_knowledge_base import GameKnowledgeBase
+from .user_game_progress import PROGRESS_MARKERS, UserGameProgress
 
 
 class BaseGameSpecialistAgent:
@@ -152,7 +152,7 @@ Use this information to provide helpful, spoiler-free assistance."""
             from langchain_openai import ChatOpenAI
 
             llm = ChatOpenAI(
-                model="glm-4.7",
+                model="openai/gpt-oss-120b",
                 base_url="http://192.168.1.79:8080/v1",
                 api_key="dummy",
             )

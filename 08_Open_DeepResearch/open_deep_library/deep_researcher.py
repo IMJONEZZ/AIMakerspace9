@@ -82,8 +82,11 @@ async def clarify_with_user(state: AgentState, config: RunnableConfig) -> Comman
         "model": configurable.research_model,
         "max_tokens": configurable.research_model_max_tokens,
         "api_key": get_api_key_for_model(configurable.research_model, config),
-        "tags": ["langsmith:nostream"]
+        "tags": ["open_source:nostream"]
     }
+    # Add LMStudio base_url for OpenAI-compatible models
+    if configurable.research_model.startswith("openai:") and configurable.lmstudio_base_url:
+        model_config["base_url"] = configurable.lmstudio_base_url
     
     # Configure model with structured output and retry logic
     clarification_model = (
@@ -135,8 +138,11 @@ async def write_research_brief(state: AgentState, config: RunnableConfig) -> Com
         "model": configurable.research_model,
         "max_tokens": configurable.research_model_max_tokens,
         "api_key": get_api_key_for_model(configurable.research_model, config),
-        "tags": ["langsmith:nostream"]
+        "tags": ["open_source:nostream"]
     }
+    # Add LMStudio base_url for OpenAI-compatible models
+    if configurable.research_model.startswith("openai:") and configurable.lmstudio_base_url:
+        research_model_config["base_url"] = configurable.lmstudio_base_url
     
     # Configure model for structured research question generation
     research_model = (
@@ -195,8 +201,11 @@ async def supervisor(state: SupervisorState, config: RunnableConfig) -> Command[
         "model": configurable.research_model,
         "max_tokens": configurable.research_model_max_tokens,
         "api_key": get_api_key_for_model(configurable.research_model, config),
-        "tags": ["langsmith:nostream"]
+        "tags": ["open_source:nostream"]
     }
+    # Add LMStudio base_url for OpenAI-compatible models
+    if configurable.research_model.startswith("openai:") and configurable.lmstudio_base_url:
+        research_model_config["base_url"] = configurable.lmstudio_base_url
     
     # Available tools: research delegation, completion signaling, and strategic thinking
     lead_researcher_tools = [ConductResearch, ResearchComplete, think_tool]
@@ -393,8 +402,11 @@ async def researcher(state: ResearcherState, config: RunnableConfig) -> Command[
         "model": configurable.research_model,
         "max_tokens": configurable.research_model_max_tokens,
         "api_key": get_api_key_for_model(configurable.research_model, config),
-        "tags": ["langsmith:nostream"]
+        "tags": ["open_source:nostream"]
     }
+    # Add LMStudio base_url for OpenAI-compatible models
+    if configurable.research_model.startswith("openai:") and configurable.lmstudio_base_url:
+        research_model_config["base_url"] = configurable.lmstudio_base_url
     
     # Prepare system prompt with MCP context if available
     researcher_prompt = research_system_prompt.format(
@@ -437,7 +449,7 @@ async def researcher_tools(state: ResearcherState, config: RunnableConfig) -> Co
     
     This function handles various types of researcher tool calls:
     1. think_tool - Strategic reflection that continues the research conversation
-    2. Search tools (tavily_search, web_search) - Information gathering
+    2. Search tools (searxng_search, web_search) - Information gathering
     3. MCP tools - External tool integrations
     4. ResearchComplete - Signals completion of individual research task
     
@@ -524,12 +536,16 @@ async def compress_research(state: ResearcherState, config: RunnableConfig):
     """
     # Step 1: Configure the compression model
     configurable = Configuration.from_runnable_config(config)
-    synthesizer_model = configurable_model.with_config({
+    compression_model_config = {
         "model": configurable.compression_model,
         "max_tokens": configurable.compression_model_max_tokens,
         "api_key": get_api_key_for_model(configurable.compression_model, config),
-        "tags": ["langsmith:nostream"]
-    })
+        "tags": ["open_source:nostream"]
+    }
+    # Add LMStudio base_url for OpenAI-compatible models
+    if configurable.compression_model.startswith("openai:") and configurable.lmstudio_base_url:
+        compression_model_config["base_url"] = configurable.lmstudio_base_url
+    synthesizer_model = configurable_model.with_config(compression_model_config)
     
     # Step 2: Prepare messages for compression
     researcher_messages = state.get("researcher_messages", [])
@@ -628,8 +644,11 @@ async def final_report_generation(state: AgentState, config: RunnableConfig):
         "model": configurable.final_report_model,
         "max_tokens": configurable.final_report_model_max_tokens,
         "api_key": get_api_key_for_model(configurable.final_report_model, config),
-        "tags": ["langsmith:nostream"]
+        "tags": ["open_source:nostream"]
     }
+    # Add LMStudio base_url for OpenAI-compatible models
+    if configurable.final_report_model.startswith("openai:") and configurable.lmstudio_base_url:
+        writer_model_config["base_url"] = configurable.lmstudio_base_url
     
     # Step 3: Attempt report generation with token limit retry logic
     max_retries = 3

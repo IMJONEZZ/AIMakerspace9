@@ -9,9 +9,9 @@ game specialist agent based on:
 
 from typing import Annotated, TypedDict
 
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
 from langchain_core.messages import HumanMessage, SystemMessage
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.message import add_messages
 from pydantic import BaseModel
 
 from .game_input_flow import GameInputFlow
@@ -67,10 +67,10 @@ class GameRouterAgent:
 Available Specialists:
 - unlockables_agent: Handles questions about unlocking weapons, tools, items, quests, and other discoverable content
   Examples: "how do I unlock the sword", "where can I find the key", "any secret items in this area"
-  
+
 - progression_agent: Handles questions about advancing through the game, solving puzzles, overcoming challenges
   Examples: "how do I solve this puzzle", "stuck on boss fight", "where do I go next"
-  
+
 - lore_agent: Handles questions about story, world-building, character backgrounds, and game mythology
   Examples: "who is this character", "what's the history of this place", "why did that happen"
 
@@ -115,7 +115,7 @@ Respond with structured output containing:
             from langchain_openai import ChatOpenAI
 
             llm = ChatOpenAI(
-                model="glm-4.7",
+                model="openai/gpt-oss-120b",
                 base_url="http://192.168.1.79:8080/v1",
             )
 

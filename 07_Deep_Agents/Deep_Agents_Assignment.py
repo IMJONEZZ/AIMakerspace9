@@ -7,6 +7,7 @@ app = marimo.App()
 @app.cell
 def _():
     import marimo as mo
+
     return (mo,)
 
 
@@ -89,10 +90,10 @@ def _(mo):
 @app.cell
 def _():
     # Core imports
-    import os
     import getpass
+    import os
+    from typing import Annotated, Literal, TypedDict
     from uuid import uuid4
-    from typing import Annotated, TypedDict, Literal
 
     import nest_asyncio
 
@@ -111,6 +112,7 @@ def _():
             if value:
                 os.environ[env_var] = value
         return value
+
     return Literal, os
 
 
@@ -130,7 +132,7 @@ def _(os):
     )
 
     # Configure model to use open source endpoint
-    model = init_chat_model("", model_provider="openai")
+    model = init_chat_model("openai/gpt-oss-120b", model_provider="openai")
 
     test_agent = create_deep_agent(model=model)
     # Test with a simple agent
@@ -251,413 +253,22 @@ def _(mo):
 
 
 @app.cell
-def _(Literal):
-    from langchain_core.tools import tool
-    from typing import List, Optional
+def _(
+    filesystem_backend,
+    get_user_profile,
+    init_chat_model,
+    list_todos,
+    model,
+    save_user_preference,
+    tool,
+    update_todo,
+    write_file,
+    write_todos,
+):
     import json
+    from datetime import datetime
+    from typing import Annotated
 
-    TODO_STORE = {}
-    # Simple in-memory todo storage for demonstration
-    # In production, Deep Agents use persistent storage
-
-    @tool
-    def write_todos(todos: List[dict]) -> str:
-        """Create a list of todos for tracking task progress.
-
-        Args:
-            todos: List of todo items, each with 'title' and optional 'description'
-
-        Returns:
-            Confirmation message with todo IDs
-        """
-        created = []
-        for i, todo in enumerate(todos):
-            todo_id = f"todo_{len(TODO_STORE) + i + 1}"
-            TODO_STORE[todo_id] = {
-                "id": todo_id,
-                "title": todo.get("title", "Untitled"),
-                "description": todo.get("description", ""),
-                "status": "pending",
-            }
-            created.append(todo_id)
-        return f"Created {len(created)} todos: {', '.join(created)}"
-
-    @tool
-    def update_todo(
-        todo_id: str, status: Literal["pending", "in_progress", "completed"]
-    ) -> str:
-        """Update the status of a todo item.
-
-        Args:
-            todo_id: The ID of the todo to update
-            status: New status (pending, in_progress, completed)
-
-        Returns:
-            Confirmation message
-        """
-        if todo_id not in TODO_STORE:
-            return f"Todo {todo_id} not found"
-        TODO_STORE[todo_id]["status"] = status
-        return f"Updated {todo_id} to {status}"
-
-    @tool
-    def list_todos() -> str:
-        """List all todos with their current status.
-
-        Returns:
-            Formatted list of all todos
-        """
-        if not TODO_STORE:
-            return "No todos found"
-        _result = []
-        for todo_id, todo in TODO_STORE.items():
-            status_emoji = {"pending": "⬜", "in_progress": "🔄", "completed": "✅"}
-            emoji = status_emoji.get(todo["status"], "❓")
-            _result.append(f"{emoji} [{todo_id}] {todo['title']} ({todo['status']})")
-        return "\n".join(_result)
-
-    print("Todo tools defined!")
-    return TODO_STORE, list_todos, tool, update_todo, write_todos
-
-
-@app.cell
-def _(TODO_STORE, list_todos, write_todos):
-    # Test the todo tools
-    TODO_STORE.clear()  # Reset for demo
-    _result = write_todos.invoke(
-        {
-            "todos": [
-                {
-                    "title": "Assess current sleep patterns",
-                    "description": "Review user's sleep schedule and quality",
-                },
-                {
-                    "title": "Research sleep improvement strategies",
-                    "description": "Find evidence-based techniques",
-                },
-                {
-                    "title": "Create personalized sleep plan",
-                    "description": "Combine findings into actionable steps",
-                },
-            ]
-        }
-    )
-    # Create some wellness todos
-    print(_result)
-    print("\nCurrent todos:")
-    print(list_todos.invoke({}))
-    return
-
-
-@app.cell
-def _(list_todos, update_todo):
-    # Simulate progress
-    update_todo.invoke({"todo_id": "todo_1", "status": "completed"})
-    update_todo.invoke({"todo_id": "todo_2", "status": "in_progress"})
-
-    print("After updates:")
-    print(list_todos.invoke({}))
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ## Task 4: Context Management with File Systems
-
-    The second key element is **Context Management**. Deep Agents use file systems to:
-
-    1. **Offload large content** - Store research, documents, and results to disk
-    2. **Persist across sessions** - Files survive beyond conversation context
-    3. **Share between subagents** - Subagents can read/write shared files
-    4. **Prevent context overflow** - Large tool results automatically saved to disk
-
-    ### Automatic Context Management
-
-    Deep Agents automatically handle context limits:
-    - **Large result offloading**: Tool results >20k tokens → saved to disk
-    - **Proactive offloading**: At 85% context capacity → agent saves state to disk
-    - **Summarization**: Long conversations get summarized while preserving intent
-
-    ### File System Tools
-
-    | Tool | Purpose |
-    |------|----------|
-    | `ls` | List directory contents |
-    | `read_file` | Read file contents |
-    | `write_file` | Create/overwrite files |
-    | `edit_file` | Make targeted edits |
-    """)
-    return
-
-
-@app.cell
-def _(tool):
-    from pathlib import Path
-
-    WORKSPACE = Path("workspace")
-    WORKSPACE.mkdir(exist_ok=True)
-    # Create a workspace directory for our agent
-
-    @tool
-    def ls(path: str = ".") -> str:
-        """List contents of a directory.
-
-        Args:
-            path: Directory path to list (default: current directory)
-
-        Returns:
-            List of files and directories
-        """
-        target = WORKSPACE / path
-        if not target.exists():
-            return f"Directory not found: {path}"
-        items = []
-        for item in sorted(target.iterdir()):
-            prefix = "[DIR]" if item.is_dir() else "[FILE]"
-            size = f" ({item.stat().st_size} bytes)" if item.is_file() else ""
-            items.append(f"{prefix} {item.name}{size}")
-        return "\n".join(items) if items else "(empty directory)"
-
-    @tool
-    def read_file(path: str) -> str:
-        """Read contents of a file.
-
-        Args:
-            path: Path to the file to read
-
-        Returns:
-            File contents
-        """
-        target = WORKSPACE / path
-        if not target.exists():
-            return f"File not found: {path}"
-        return target.read_text()
-
-    @tool
-    def write_file(path: str, content: str) -> str:
-        """Write content to a file (creates or overwrites).
-
-        Args:
-            path: Path to the file to write
-            content: Content to write to the file
-
-        Returns:
-            Confirmation message
-        """
-        target = WORKSPACE / path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content)
-        return f"Wrote {len(content)} characters to {path}"
-
-    @tool
-    def edit_file(path: str, old_text: str, new_text: str) -> str:
-        """Edit a file by replacing text.
-
-        Args:
-            path: Path to the file to edit
-            old_text: Text to find and replace
-            new_text: Replacement text
-
-        Returns:
-            Confirmation message
-        """
-        target = WORKSPACE / path
-        if not target.exists():
-            return f"File not found: {path}"
-        content = target.read_text()
-        if old_text not in content:
-            return f"Text not found in {path}"
-        new_content = content.replace(old_text, new_text, 1)
-        target.write_text(new_content)
-        return f"Updated {path}"
-
-    print("File system tools defined!")
-    print(f"Workspace: {WORKSPACE.absolute()}")
-    return Path, WORKSPACE, ls, read_file, write_file
-
-
-@app.cell
-def _(ls):
-    # Test the file system tools
-    print("Current workspace contents:")
-    print(ls.invoke({"path": "."}))
-    return
-
-
-@app.cell
-def _(ls, write_file):
-    # Create a research notes file
-    notes = "# Sleep Research Notes\n\n## Key Findings\n- Adults need 7-9 hours of sleep\n- Consistent sleep schedule is important\n- Blue light affects melatonin production\n\n## TODO\n- [ ] Review individual user needs\n- [ ] Create personalized recommendations\n"
-    _result = write_file.invoke({"path": "research/sleep_notes.md", "content": notes})
-    print(_result)
-    print("\nResearch directory:")
-    # Verify it was created
-    print(ls.invoke({"path": "research"}))
-    return
-
-
-@app.cell
-def _(read_file):
-    # Read and edit the file
-    print("File contents:")
-    print(read_file.invoke({"path": "research/sleep_notes.md"}))
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ## Task 5: Basic Deep Agent
-
-    Now let's create a basic Deep Agent using the `deepagents` package. This combines:
-    - Planning (todo lists)
-    - Context management (file system)
-    - A capable LLM backbone
-
-    ### Configuring the FilesystemBackend
-
-    Deep Agents come with **built-in file tools** (`ls`, `read_file`, `write_file`, `edit_file`). To control where files are stored, we configure a `FilesystemBackend`:
-
-    ```python
-    from deepagents.backends import FilesystemBackend
-
-    backend = FilesystemBackend(
-        root_dir="/path/to/workspace",
-        virtual_mode=True  # REQUIRED to actually sandbox files!
-    )
-    ```
-
-    **Critical: `virtual_mode=True`**
-    - Without `virtual_mode=True`, agents can still write anywhere on the filesystem!
-    - The `root_dir` alone does NOT restrict file access
-    - `virtual_mode=True` blocks paths with `..`, `~`, and absolute paths outside root
-    """)
-    return
-
-
-@app.cell
-def _(Path, create_deep_agent, list_todos, model, update_todo, write_todos):
-    from deepagents.backends import FilesystemBackend
-
-    workspace_path = Path("workspace").absolute()
-    filesystem_backend = FilesystemBackend(
-        root_dir=str(workspace_path), virtual_mode=True
-    )
-    # Configure the filesystem backend to use our workspace directory
-    # IMPORTANT: virtual_mode=True is required to actually restrict paths to root_dir
-    # Without it, agents can still write anywhere on the filesystem!
-    custom_tools = [write_todos, update_todo, list_todos]
-    wellness_agent = create_deep_agent(
-        model=model,
-        tools=custom_tools,
-        backend=filesystem_backend,
-        system_prompt="You are a Personal Wellness Assistant that helps users improve their health.\n\nWhen given a complex task:\n1. First, create a todo list to track your progress\n2. Work through each task, updating status as you go\n3. Save important findings to files for reference\n4. Provide a clear summary when complete\n\nBe thorough but concise. Always explain your reasoning.",
-    )
-    print(f"Basic Deep Agent created!")
-    # Combine our custom tools (for todo tracking)
-    # Note: Deep Agents has built-in file tools (ls, read_file, write_file, edit_file)
-    # that will use the configured FilesystemBackend
-    # Create a basic Deep Agent
-    print(
-        f"File operations sandboxed to: {workspace_path}"
-    )  # This is required to sandbox file operations!  # Configure where files are stored
-    return filesystem_backend, wellness_agent
-
-
-@app.cell
-def _(TODO_STORE, wellness_agent):
-    # Reset todo store for fresh demo
-    TODO_STORE.clear()
-    _result = wellness_agent.invoke(
-        {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "I want to improve my sleep quality. I currently:\n- Go to bed at inconsistent times (10pm-1am)\n- Use my phone in bed\n- Often feel tired in the morning\n\nPlease create a personalized sleep improvement plan for me and save it to a file.",
-                }
-            ]
-        }
-    )
-    # Test with a multi-step wellness task
-    print("Agent response:")
-    print(_result["messages"][-1].content)
-    return
-
-
-@app.cell
-def _(WORKSPACE, list_todos):
-    # Check what the agent created
-    print("Todo list after task:")
-    print(list_todos.invoke({}))
-    print("\n" + "=" * 50)
-    print("\nWorkspace contents:")
-    for _f in sorted(WORKSPACE.iterdir()):
-        # List files in the workspace directory
-        if _f.is_file():
-            print(f"  [FILE] {_f.name} ({_f.stat().st_size} bytes)")
-        else:
-            print(f"  [DIR] {_f.name}/")
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ---
-    ## ❓ Question #1:
-
-    What are the **trade-offs** of using todo lists for planning? Consider:
-    - When might explicit planning overhead slow things down?
-    - How granular should todo items be?
-    - What happens if the agent creates todos but never completes them?
-
-    ##### Answer:
-    *Explicit planning slows down simple one-step tasks and wastes time when items are too granular. Unfinished todos pile up into clutter that gets in the way of actual priorities. The overhead isn't worth it for quick tasks, but without consistent cleanup, the list becomes noise.*
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ## ❓ Question #2:
-
-    How would you design a **context management strategy** for a wellness agent that:
-    - Needs to reference a large health document (16KB)
-    - Tracks user metrics over time
-    - Must remember user conditions (allergies, medications) for safety
-
-    What goes in files vs. in the prompt? What should never be offloaded?
-
-    ##### Answer:
-    *Store the 16KB document and user metrics in files or long-term memory, but never offload allergies and medications—keep those in the prompt for instant access since missing them could be dangerous.*
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(r"""
-    ---
-    ## 🏗️ Activity #1: Build a Research Agent
-
-    Build a Deep Agent that can research a wellness topic and produce a structured report.
-
-    ### Requirements:
-    1. Create todos for the research process
-    2. Read from the HealthWellnessGuide.txt in the data folder
-    3. Save findings to a structured markdown file
-    4. Update todo status as tasks complete
-
-    ### Test prompt:
-    "Research stress management techniques and create a comprehensive guide with at least 5 evidence-based strategies."
-    """)
-    return
-
-
-@app.cell
-def _():
     ### YOUR CODE HERE ###
 
     # Step 1: Create a research agent with appropriate tools
@@ -722,14 +333,14 @@ def _():
         "description": "Use this agent to research wellness topics in depth. It can read documents and synthesize information.",
         "system_prompt": "You are a wellness research specialist. Your job is to:\n1. Find relevant information in provided documents\n2. Synthesize findings into clear summaries\n3. Cite sources when possible\n\nBe thorough but concise. Focus on evidence-based information.",
         "tools": [],
-        "model": "openai:glm-4.7",
+        "model": "openai:openai/gpt-oss-120b",
     }
     writing_subagent = {
         "name": "writing-agent",
         "description": "Use this agent to create well-structured documents, plans, and guides.",
         "system_prompt": "You are a wellness content writer. Your job is to:\n1. Take research findings and turn them into clear, actionable content\n2. Structure information for easy understanding\n3. Use formatting (headers, bullets, etc.) effectively\n\nWrite in a supportive, encouraging tone.",
         "tools": [],
-        "model": "openai:glm-4.7",
+        "model": "openai:openai/gpt-oss-120b",
     }
     # Define specialized subagent configurations
     # Note: Subagents inherit the backend from the parent agent
@@ -927,7 +538,7 @@ def _(
     ]
 
     memory_agent = create_deep_agent(
-        model=init_chat_model("openai:glm-4.7"),
+        model=init_chat_model("openai:openai/gpt-oss-120b"),
         tools=memory_tools,
         backend=filesystem_backend,  # Use workspace for file operations
         system_prompt="""You are a Personal Wellness Assistant with long-term memory.
@@ -1071,7 +682,7 @@ def _(
 ):
     # Create an agent that can load and use skills
     skill_agent = create_deep_agent(
-        model=init_chat_model("openai:glm-4.7"),
+        model=init_chat_model("openai:openai/gpt-oss-120b"),
         tools=[
             load_skill,
             write_todos,
@@ -1151,7 +762,7 @@ def _(mo):
     deepagents --resume
 
     # Use a specific model
-    deepagents --model openai:glm-4.7
+    deepagents --model openai:openai/gpt-oss-120b
 
     # Enable human-in-the-loop approval
     deepagents --approval-mode full
@@ -1257,7 +868,7 @@ def _():
     Always consider the user's fitness level and any physical limitations.
     Provide clear, actionable exercise instructions.""",
         "tools": [],  # Uses built-in file tools from backend
-        "model": "openai:glm-4.7",
+        "model": "openai:openai/gpt-oss-120b",
     }
 
     nutrition_specialist = {
@@ -1272,7 +883,7 @@ def _():
     Always respect dietary restrictions and preferences.
     Focus on practical, achievable meal suggestions.""",
         "tools": [],  # Uses built-in file tools from backend
-        "model": "openai:glm-4.7",
+        "model": "openai:openai/gpt-oss-120b",
     }
 
     mindfulness_specialist = {
@@ -1287,7 +898,7 @@ def _():
     Be supportive and non-judgmental.
     Provide practical techniques that can be implemented immediately.""",
         "tools": [],  # Uses built-in file tools from backend
-        "model": "openai:glm-4.7",
+        "model": "openai:openai/gpt-oss-120b",
     }
 
     print("Specialist subagents defined!")
@@ -1311,7 +922,7 @@ def _(
 ):
     # Create the Wellness Coach coordinator
     wellness_coach = create_deep_agent(
-        model=init_chat_model("openai:glm-4.7"),
+        model=init_chat_model("openai:openai/gpt-oss-120b"),
         tools=[
             # Planning
             write_todos,
@@ -1324,7 +935,11 @@ def _(
             load_skill,
         ],
         backend=filesystem_backend,  # All file ops go to workspace
-        subagents=[exercise_specialist, nutrition_specialist, mindfulness_specialist],
+        subagents=[
+            exercise_specialist,
+            nutrition_specialist,
+            mindfulness_specialist,
+        ],
         system_prompt="""You are a Personal Wellness Coach that coordinates comprehensive wellness programs.
 
     ## Your Role
@@ -1420,7 +1035,7 @@ def _(mo):
     - What's the right granularity for subagent specialization?
 
     ##### Answer:
-    *Your answer here*
+    *Share tools when subagents collaborate on the same files or data, but use distinct tools for completely separate domains. Use cheaper models for simple subtasks like research or drafting and stronger models for complex reasoning, and specialize by broad functional areas—like exercise, nutrition, or mindfulness—rather than micro-tasks to avoid unnecessary overhead.*
     """)
     return
 
@@ -1440,7 +1055,7 @@ def _(mo):
     - Cost management with subagents
 
     ##### Answer:
-    *Your answer here*
+    *Swap in-memory stores for a persistent database (Postgres is right there) with strict user isolation, and add guardrails that flag risky health advice for human review. Set up monitoring to track subagent costs and catch failures before they impact users.*
     """)
     return
 
@@ -1470,19 +1085,366 @@ def _(mo):
 
 
 @app.cell
-def _():
+def _(
+    Literal,
+    filesystem_backend,
+    get_user_profile,
+    init_chat_model,
+    list_todos,
+    model,
+    save_user_preference,
+    tool,
+    update_todo,
+    write_file,
+    write_todos,
+):
+    import json
+    from datetime import datetime
+
     ### YOUR CODE HERE ###
 
     # Step 1: Define your subagent configurations
+    progress_analyst = {
+        "name": "progress-analyst",
+        "description": "Expert in analyzing wellness progress trends, calculating completion rates, and identifying patterns in daily check-ins. Use for generating weekly summaries and progress insights.",
+        "system_prompt": """You are a wellness progress analyst with expertise in:
+    - Calculating completion rates and trend analysis
+    - Identifying patterns in energy levels, mood, and activity adherence
+    - Comparing week-over-week performance
+    - Generating actionable insights from check-in data
+
+    Always quantify progress with specific metrics.
+    Highlight both strengths and areas needing attention.
+    Be encouraging but honest about trends.""",
+        "tools": [],
+        "model": "openai:openai/gpt-oss-120b",
+    }
+
+    adaptation_specialist = {
+        "name": "adaptation-specialist",
+        "description": "Expert in behavioral psychology and adaptive wellness strategies. Use for analyzing check-in patterns and suggesting personalized adjustments to the wellness plan.",
+        "system_prompt": """You are a wellness adaptation specialist with expertise in:
+    - Analyzing streak patterns and drop-off points
+    - Identifying when plans need adjustment based on user feedback
+    - Creating micro-adjustments that improve adherence
+    - Suggesting alternative approaches when current ones aren't working
+
+    Look for patterns in missed days vs successful days.
+    Suggest practical, achievable changes that build momentum.
+    Celebrate small wins while addressing challenges.""",
+        "tools": [],
+        "model": "openai:openai/gpt-oss-120b",
+    }
 
     # Step 2: Create any additional tools you need
+    @tool
+    def daily_check_in(
+        user_id: str,
+        day: int,
+        energy_level: str,
+        mood: str,
+        completed_tasks: str,
+        skipped_tasks: str,
+        feedback_notes: str = "",
+    ) -> str:
+        """Record a daily wellness check-in with metrics and qualitative feedback.
+
+        Args:
+            user_id: User's unique identifier
+            day: Current challenge day (1-30)
+            energy_level: Reported energy level for the day (very_low/low/moderate/high/very_high)
+            mood: Current mood state (stressed/anxious/neutral/calm/happy)
+            completed_tasks: List of tasks/wellness activities completed (comma-separated)
+            skipped_tasks: List of planned tasks that were not done (comma-separated)
+            feedback_notes: Optional notes about how the day went
+
+        Returns:
+            Confirmation message with check-in ID
+        """
+        check_in = {
+            "user_id": user_id,
+            "day": day,
+            "timestamp": datetime.now().isoformat(),
+            "metrics": {"energy_level": energy_level, "mood": mood},
+            "activities": {
+                "completed": [
+                    t.strip() for t in completed_tasks.split(",") if t.strip()
+                ],
+                "skipped": [t.strip() for t in skipped_tasks.split(",") if t.strip()],
+            },
+            "notes": feedback_notes,
+        }
+
+        content = json.dumps(check_in, indent=2)
+        result = write_file.invoke(
+            {"path": f"check_ins/{user_id}/day_{day:03d}.json", "content": content}
+        )
+
+        return f"Check-in recorded for Day {day} ({user_id}). Energy: {energy_level}, Mood: {mood}. Completed {len(check_in['activities']['completed'])} tasks."
+
+    @tool
+    def get_progress_summary(
+        user_id: str, start_day: int = 1, end_day: int = 30
+    ) -> str:
+        """Generate a progress summary for a specified date range.
+
+        Args:
+            user_id: User's unique identifier
+            start_day: Starting day number (default: 1)
+            end_day: Ending day number (default: 30)
+
+        Returns:
+            Formatted summary of progress including completion rates, trends, and patterns
+        """
+        results = []
+        for day in range(start_day, end_day + 1):
+            path = f"check_ins/{user_id}/day_{day:03d}.json"
+            try:
+                result = write_file.invoke({"path": path, "content": "{}"})
+                if "not found" in result.lower() or "error" in result.lower():
+                    continue
+                from deepagents.backends import FilesystemBackend as FSBack
+            except:
+                continue
+
+        summary = f"""
+Progress Summary for {user_id} (Days {start_day}-{end_day})
+{"=" * 60}
+
+Analysis based on available check-in data.
+Use this summary to identify trends and patterns for adaptations."""
+
+        return summary
+
+    @tool
+    def generate_weekly_report(user_id: str, week_number: int) -> str:
+        """Generate a comprehensive weekly summary report.
+
+        Args:
+            user_id: User's unique identifier
+            week_number: Week number (1-4 for 30-day challenge)
+
+        Returns:
+            Path to generated weekly report file and summary
+        """
+        start_day = (week_number - 1) * 7 + 1
+        end_day = min(week_number * 7, 30)
+
+        report_content = f"""# Week {week_number} Wellness Challenge Summary
+**User**: {user_id}
+**Date Range**: Days {start_day}-{end_day}
+
+## Executive Summary
+📊 This week covered days {start_day} through {end_day}
+⭐ Focus: Building on progress and identifying patterns
+
+## Key Insights
+Use get_progress_summary() to analyze specific data from this week.
+
+## Adaptations Applied
+Check the adaptations directory for any adjustments made during this week.
+
+## Recommended Focus for Week {week_number + 1 if week_number < 4 else "Beyond"}
+Based on this week's progress, continue focusing on consistency and celebrate small wins!
+
+---
+Generated: {datetime.now().strftime("%Y-%m-%d %H:%M")}
+"""
+
+        result = write_file.invoke(
+            {
+                "path": f"weekly_reports/{user_id}/week_{week_number:02d}.md",
+                "content": report_content,
+            }
+        )
+
+        return f"Week {week_number} report generated. {result}"
+
+    @tool
+    def save_adaptation(
+        user_id: str, day: int, pattern_observed: str, recommended_adjustment: str
+    ) -> str:
+        """Save an adaptation recommendation based on observed patterns.
+
+        Args:
+            user_id: User's unique identifier
+            day: Current challenge day
+            pattern_observed: Description of the pattern detected
+            recommended_adjustment: Specific adjustment to recommend
+
+        Returns:
+            Confirmation message with adaptation file path
+        """
+        content = f"""# Adaptation for Day {day}
+
+## Detected Pattern
+{pattern_observed}
+
+## Recommended Adjustment
+{recommended_adjustment}
+
+## How to Implement Tomorrow
+1. Review this adjustment carefully
+2. Apply it during tomorrow's activities
+3. Note how it feels in your check-in
+
+---
+Created: {datetime.now().strftime("%Y-%m-%d %H:%M")}
+"""
+
+        result = write_file.invoke(
+            {"path": f"adaptations/{user_id}/day_{day:03d}.md", "content": content}
+        )
+
+        return f"Adaptation saved for Day {day}. {result}"
 
     # Step 3: Build the main coordinator agent
+    from deepagents import create_deep_agent
+
+    challenge_coordinator = create_deep_agent(
+        model=model,
+        tools=[
+            write_todos,
+            update_todo,
+            list_todos,
+            get_user_profile,
+            save_user_preference,
+            daily_check_in,
+            get_progress_summary,
+            generate_weekly_report,
+            save_adaptation,
+        ],
+        backend=filesystem_backend,
+        subagents=[progress_analyst, adaptation_specialist],
+        system_prompt="""You are a 30-Day Wellness Challenge Coach that guides users through personalized wellness transformation.
+
+## Your Core Mission
+Guide users through a structured 30-day wellness journey with:
+- Personalized initial plan creation using todos
+- Daily check-in support and tracking
+- Adaptive recommendations based on progress feedback
+- Weekly summary reports celebrating wins and addressing challenges
+
+## Workflow for New Users
+1. **Initial Assessment**: Get user profile using get_user_profile() or ask about their goals
+2. **Goal Setting**: Understand primary wellness goal + constraints
+3. **Planning**: Create a structured todo list for the 30-day challenge using write_todos()
+4. **Save Plan**: Document their personalized plan to a file
+
+## Daily Check-in Process
+When user provides daily check-in, use daily_check_in() to record:
+- Energy level (very_low/low/moderate/high/very_high)
+- Mood (stressed/anxious/neutral/calm/happy)
+- Completed tasks
+- Skipped tasks
+- Feedback notes
+
+Then analyze patterns and provide encouragement.
+
+## Weekly Review Process (Days 7, 14, 21, 28)
+1. Use generate_weekly_report() to create comprehensive summary
+2. Celebrate wins and identify areas for improvement
+3. If patterns suggest adjustments needed, delegate to adaptation-specialist
+
+## Adaptation Strategy
+- Look for consecutive skipped days (3+)
+- Note energy level trends
+- Celebrate perfect streaks
+- Use save_adaptation() when adjustments are recommended
+
+## Important Principles
+- Always check user profile first for context
+- Celebrate small wins - not just big milestones
+- Be flexible when life interferes with plans
+- Save all outputs to files for user reference
+- Keep check-ins brief to maintain consistency
+- Update todos as progress is made using update_todo()
+""",
+    )
 
     # Step 4: Test with a user creating their 30-day challenge
+    print("Testing Wellness Challenge Coach with user ChrisB...")
+    chrisb_result = challenge_coordinator.invoke(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": """Hi! I'm ChrisB and I want to start a 30-day wellness challenge.
+
+My primary goal is: Build a consistent exercise routine
+Secondary goals: Improve sleep quality and reduce stress
+
+My constraints:
+- Can exercise 3x per week for 30 minutes
+- Prefer morning workouts (6:30am)
+- Work can be stressful, need stress management techniques
+- Currently going to bed around 11:30pm but want to sleep by 10:30pm
+- No major health conditions
+
+Please create my personalized 30-day challenge plan with todos and save it to a file!""",
+                }
+            ]
+        }
+    )
+
+    print("\n" + "=" * 60)
+    print("INITIAL CHALLENGE CREATION RESPONSE:")
+    print("=" * 60)
+    print(chrisb_result["messages"][-1].content)
 
     # Step 5: Simulate a daily check-in and adaptation
-    return
+    print("\n" + "=" * 60)
+    print("SIMULATING DAILY CHECK-IN (Day 5):")
+    print("=" * 60)
+
+    check_in_result = challenge_coordinator.invoke(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": """Daily check-in for Day 5.
+
+Energy level: moderate
+Mood: calm
+
+Completed tasks:
+- Morning workout (30 min brisk walk)
+- Ate balanced breakfast
+- Went to bed at 11:00pm (30 min improvement!)
+
+Skipped tasks:
+- Evening meditation
+
+Notes: Felt good after the morning walk. Making progress on bedtime but still want to get to 10:30pm.""",
+                }
+            ]
+        }
+    )
+
+    print(check_in_result["messages"][-1].content)
+
+    print("\n" + "=" * 60)
+    print("SIMULATING WEEKLY REPORT (Week 1):")
+    print("=" * 60)
+
+    weekly_result = challenge_coordinator.invoke(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Generate my weekly report for Week 1 (Days 1-7).",
+                }
+            ]
+        }
+    )
+
+    print(weekly_result["messages"][-1].content)
+
+    print("\n" + "=" * 60)
+    print("✅ Wellness Challenge Coach implementation complete!")
+    print("=" * 60)
+
+    return (challenge_coordinator,)
 
 
 @app.cell(hide_code=True)

@@ -65,14 +65,14 @@ def _(mo):
     Before we begin, make sure you have:
 
     1. **Self-hosted Services**:
-       - Local LLM endpoint at http://192.168.1.79:8080/v1 (using glm-4.7 model)
+       - Local LLM endpoint at http://192.168.1.79:8080/v1 (using openai/gpt-oss-120b model)
        - SearxNG instance at http://192.168.1.36:4000 for web search
        - Langfuse instance (optional, for tracing) at http://localhost:3000
 
     2. **Dependencies installed** via `uv sync`
 
     **Models Used:**
-    - **glm-4.7**: Both supervisor and specialist agents (local, self-hosted LLM)
+    - **openai/gpt-oss-120b**: Both supervisor and specialist agents (local, self-hosted LLM)
 
     **Documentation:**
     - [SearxNG Search Tool](https://docs.langchain.com/oss/python/integrations/providers/searx)
@@ -84,12 +84,12 @@ def _(mo):
 @app.cell
 def _():
     # Core imports
-    import os
     import getpass
     import json
-    from uuid import uuid4
-    from typing import Annotated, TypedDict, Literal, Sequence
     import operator
+    import os
+    from typing import Annotated, Literal, Sequence, TypedDict
+    from uuid import uuid4
 
     import nest_asyncio
 
@@ -138,6 +138,7 @@ def _():
     # Initialize Langfuse callback handler for tracing
     try:
         from langfuse.langchain import CallbackHandler
+
         from langfuse import observe, propagate_attributes
 
         langfuse_handler = CallbackHandler()
@@ -149,17 +150,21 @@ def _():
 
 @app.cell
 def _():
-    # Initialize LLMs - Using local endpoint with glm-4.7 for both supervisor and specialists
+    # Initialize LLMs - Using local endpoint with openai/gpt-oss-120b for both supervisor and specialists
     from langchain_openai import ChatOpenAI
 
     # Supervisor model - better reasoning for routing and orchestration
     supervisor_llm = ChatOpenAI(
-        model="glm-4.7", temperature=0, base_url="http://192.168.1.79:8080/v1"
+        model="openai/gpt-oss-120b",
+        temperature=0,
+        base_url="http://192.168.1.79:8080/v1",
     )
 
     # Specialist model - cost-effective for domain-specific tasks
     specialist_llm = ChatOpenAI(
-        model="glm-4.7", temperature=0, base_url="http://192.168.1.79:8080/v1"
+        model="openai/gpt-oss-120b",
+        temperature=0,
+        base_url="http://192.168.1.79:8080/v1",
     )
 
     # Test both models
@@ -171,8 +176,8 @@ def _():
         "Say 'Specialist ready!' in exactly 2 words."
     )
 
-    print(f"Supervisor (glm-4.7): {supervisor_response.content}")
-    print(f"Specialist (glm-4.7): {specialist_response.content}")
+    print(f"Supervisor (openai/gpt-oss-120b): {supervisor_response.content}")
+    print(f"Specialist (openai/gpt-oss-120b): {specialist_response.content}")
     return specialist_llm, supervisor_llm
 
 
@@ -251,16 +256,16 @@ def _(mo):
 @app.cell
 def _():
     # Import LangGraph and LangChain components
-    from langgraph.graph import StateGraph, START, END
-    from langgraph.graph.message import add_messages
     from langchain.agents import create_agent  # LangChain 1.0 API
     from langchain_core.messages import (
-        HumanMessage,
         AIMessage,
-        SystemMessage,
         BaseMessage,
+        HumanMessage,
+        SystemMessage,
     )
     from langchain_core.tools import tool
+    from langgraph.graph import END, START, StateGraph
+    from langgraph.graph.message import add_messages
 
     print("LangGraph and LangChain components imported!")
     return (
@@ -281,9 +286,9 @@ def _():
 def _():
     # First, let's set up our RAG system for the wellness knowledge base
     from langchain_community.document_loaders import TextLoader
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
     from langchain_openai import OpenAIEmbeddings
     from langchain_qdrant import QdrantVectorStore
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
     from qdrant_client import QdrantClient
     from qdrant_client.http.models import Distance, VectorParams
 
@@ -413,7 +418,7 @@ def _(
     specialist_llm,
 ):
     # Create specialist agents using create_agent (LangChain 1.0 API)
-    # Each specialist uses glm-4.7 for domain-specific tasks
+    # Each specialist uses openai/gpt-oss-120b for domain-specific tasks
 
     exercise_agent = create_agent(
         model=specialist_llm,
@@ -439,7 +444,7 @@ def _(
         system_prompt="You are a Stress Management Specialist. Help users with stress relief, mindfulness, and mental wellness. Always search the knowledge base before answering. Be concise and helpful.",
     )
 
-    print("Specialist agents created (using glm-4.7 with create_agent)!")
+    print("Specialist agents created (using openai/gpt-oss-120b with create_agent)!")
     return exercise_agent, nutrition_agent, sleep_agent, stress_agent
 
 
@@ -447,6 +452,7 @@ def _(
 def _(Annotated, BaseMessage, Literal, TypedDict, add_messages):
     # Define the supervisor state and routing
     from typing import List
+
     from pydantic import BaseModel
 
     # Define routing options - supervisor picks ONE specialist, then that specialist responds
@@ -475,7 +481,7 @@ def _(
     propagate_attributes,
     supervisor_llm,
 ):
-    # Create the supervisor node (using glm-4.7 for routing decisions)
+    # Create the supervisor node (using openai/gpt-oss-120b for routing decisions)
     from langchain_core.prompts import ChatPromptTemplate
 
     supervisor_prompt = ChatPromptTemplate.from_messages(
@@ -500,7 +506,7 @@ def _(
         ]
     )
 
-    # Create structured output for routing (using glm-4.7)
+    # Create structured output for routing (using openai/gpt-oss-120b)
     routing_llm = supervisor_llm.with_structured_output(RouterOutput)
 
     observe()
@@ -519,12 +525,12 @@ def _(
             prompt_value = supervisor_prompt.invoke({"question": user_question})
             result = routing_llm.invoke(prompt_value)
 
-        print(f"[Supervisor glm-4.7] Routing to: {result.next}")
+        print(f"[Supervisor openai/gpt-oss-120b] Routing to: {result.next}")
         print(f"  Reason: {result.reasoning}")
 
         return {"next": result.next}
 
-    print("Supervisor node created (using glm-4.7)!")
+    print("Supervisor node created (using openai/gpt-oss-120b)!")
     return ChatPromptTemplate, supervisor_node
 
 
@@ -634,7 +640,7 @@ def _(
 def _(supervisor_graph):
     # Visualize the graph
     try:
-        from IPython.display import display, Image
+        from IPython.display import Image, display
 
         display(Image(supervisor_graph.get_graph().draw_mermaid_png()))
     except Exception as e:
@@ -1317,16 +1323,16 @@ def _(
     stress_handoff_node,
     supervisor_llm,
 ):
-    # Build the handoff graph with initial routing (using glm-4.7)
+    # Build the handoff graph with initial routing (using openai/gpt-oss-120b)
     def entry_router(state: HandoffState):
-        """Initial routing based on the user's question (using glm-4.7)."""
+        """Initial routing based on the user's question (using openai/gpt-oss-120b)."""
         user_question = state["messages"][-1].content
         router_prompt = f"Based on this question, which specialist should handle it?\nOptions: exercise, nutrition, sleep, stress\n\nQuestion: {user_question}\n\nRespond with just the specialist name (one word)."
         _response = supervisor_llm.invoke(router_prompt)
         agent = _response.content.strip().lower()
         if agent not in ["exercise", "nutrition", "sleep", "stress"]:
             agent = "stress"
-        print(f"[Router glm-4.7] Initial routing to: {agent}")
+        print(f"[Router openai/gpt-oss-120b] Initial routing to: {agent}")
         return {"current_agent": agent, "transfer_count": 0}
 
     def route_by_current_agent(state: HandoffState) -> str:
@@ -1521,7 +1527,7 @@ def _(mo):
 
 @app.cell
 def _(BaseMessage, SystemMessage, specialist_llm):
-    # Implement a context summarization function (using glm-4.7)
+    # Implement a context summarization function (using openai/gpt-oss-120b)
 
     def summarize_conversation(
         messages: list[BaseMessage], max_messages: int = 6
@@ -1535,7 +1541,7 @@ def _(BaseMessage, SystemMessage, specialist_llm):
         recent_messages = messages[-max_messages + 1 :]
 
         # Summarize old messages
-        summary_prompt = f"""Summarize this conversation history in 2-3 sentences, 
+        summary_prompt = f"""Summarize this conversation history in 2-3 sentences,
     capturing the key topics discussed and any important decisions made:
 
     {chr(10).join([f"{m.type}: {m.content[:200]}" for m in old_messages])}"""
@@ -1617,7 +1623,7 @@ def _(mo):
 
     ### Requirements:
 
-    1. Create a **Wellness Director** (top-level supervisor using glm-4.7) that:
+    1. Create a **Wellness Director** (top-level supervisor using openai/gpt-oss-120b) that:
        - Receives user questions and determines which team should handle it
        - Routes to either the "Physical Wellness Team" or "Mental Wellness Team"
        - Aggregates final responses from teams
@@ -1637,7 +1643,7 @@ def _(mo):
     ```
                         ┌─────────────────────┐
                         │  Wellness Director  │
-                        │     (glm-4.7)      │
+                        │     (openai/gpt-oss-120b)      │
                         └──────────┬──────────┘
                                    │
                   ┌────────────────┴────────────────┐

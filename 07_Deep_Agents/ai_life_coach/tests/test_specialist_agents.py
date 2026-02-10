@@ -21,28 +21,29 @@ Test Scenarios:
 Run with: pytest tests/test_specialist_agents.py -v
 """
 
-import pytest
-from pathlib import Path
 import sys
+from pathlib import Path
+
+import pytest
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.agents import (
-    get_career_specialist,
-    get_relationship_specialist,
-    get_finance_specialist,
-    get_wellness_specialist,
-)
-from src.tools.memory_tools import create_memory_tools
-from src.tools.context_tools import create_context_tools
-from src.tools.career_tools import create_career_tools
-from src.tools.relationship_tools import create_relationship_tools
-from src.tools.finance_tools import create_finance_tools
-from src.tools.wellness_tools import create_wellness_tools
-from src.memory import create_memory_store
 from deepagents.backends import FilesystemBackend
 
+from src.agents import (
+    get_career_specialist,
+    get_finance_specialist,
+    get_relationship_specialist,
+    get_wellness_specialist,
+)
+from src.memory import create_memory_store
+from src.tools.career_tools import create_career_tools
+from src.tools.context_tools import create_context_tools
+from src.tools.finance_tools import create_finance_tools
+from src.tools.memory_tools import create_memory_tools
+from src.tools.relationship_tools import create_relationship_tools
+from src.tools.wellness_tools import create_wellness_tools
 
 # ============================================================================
 # Test Fixtures
@@ -715,7 +716,7 @@ class TestSpecialistMemoryIntegration:
         assert profile_tool is not None, "Should have get_user_profile tool"
 
         # Test saving and retrieving user profile using MemoryManager
-        from src.memory import UserProfile, MemoryManager
+        from src.memory import MemoryManager, UserProfile
 
         memory_manager = MemoryManager(memory_store)
         # Create a profile with valid parameters

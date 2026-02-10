@@ -16,30 +16,30 @@ Author: AI Life Coach Development Team
 Date: 2026-02-07
 """
 
-import pytest
 import json
-import tempfile
 import shutil
+import sys
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-from unittest.mock import Mock, patch, MagicMock
-import sys
+from typing import Any, Dict, List, Optional
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Ensure src is in path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from src.config import config
 from src.tools.career_tools import create_career_tools
-from src.tools.relationship_tools import create_relationship_tools
-from src.tools.finance_tools import create_finance_tools
-from src.tools.wellness_tools import create_wellness_tools
 from src.tools.cross_domain_tools import create_cross_domain_tools
-from src.tools.emergency_tools import create_emergency_tools, CrisisLevel, CrisisType
+from src.tools.emergency_tools import CrisisLevel, CrisisType, create_emergency_tools
+from src.tools.finance_tools import create_finance_tools
 from src.tools.memory_tools import create_memory_tools
 from src.tools.planning_tools import create_planning_tools
+from src.tools.relationship_tools import create_relationship_tools
 from src.tools.user_tools import create_user_tools
-
+from src.tools.wellness_tools import create_wellness_tools
 
 # ==============================================================================
 # Test Fixtures

@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 class SearchAPI(Enum):
     """Enumeration of available search API providers."""
     
+    SEARXNG = "searxng"
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
     TAVILY = "tavily"
@@ -76,18 +77,29 @@ class Configuration(BaseModel):
     )
     # Research Configuration
     search_api: SearchAPI = Field(
-        default=SearchAPI.TAVILY,
+        default=SearchAPI.SEARXNG,
         metadata={
             "x_oap_ui_config": {
                 "type": "select",
-                "default": "tavily",
+                "default": "searxng",
                 "description": "Search API to use for research. NOTE: Make sure your Researcher Model supports the selected search API.",
                 "options": [
+                    {"label": "SearxNG (Self-Hosted)", "value": SearchAPI.SEARXNG.value},
                     {"label": "Tavily", "value": SearchAPI.TAVILY.value},
                     {"label": "OpenAI Native Web Search", "value": SearchAPI.OPENAI.value},
                     {"label": "Anthropic Native Web Search", "value": SearchAPI.ANTHROPIC.value},
                     {"label": "None", "value": SearchAPI.NONE.value}
                 ]
+            }
+        }
+    )
+    searxng_host: str = Field(
+        default="http://192.168.1.36:4000",
+        metadata={
+            "x_oap_ui_config": {
+                "type": "text",
+                "default": "http://192.168.1.36:4000",
+                "description": "SearxNG instance URL for web search"
             }
         }
     )
@@ -117,14 +129,45 @@ class Configuration(BaseModel):
             }
         }
     )
-    # Model Configuration
-    summarization_model: str = Field(
-        default="openai:gpt-4.1-mini",
+    # LMStudio Configuration
+    lmstudio_base_url: str = Field(
+        default="http://192.168.1.79:8080/v1",
         metadata={
             "x_oap_ui_config": {
                 "type": "text",
-                "default": "openai:gpt-4.1-mini",
-                "description": "Model for summarizing research results from Tavily search results"
+                "default": "http://192.168.1.79:8080/v1",
+                "description": "LMStudio OpenAI-compatible API base URL"
+            }
+        }
+    )
+    lmstudio_api_key: str = Field(
+        default="",
+        metadata={
+            "x_oap_ui_config": {
+                "type": "text",
+                "default": "",
+                "description": "LMStudio API key (typically not required for local instances)"
+            }
+        }
+    )
+    embedding_model: str = Field(
+        default="text-embedding-nomic-embed-text-v2-moe",
+        metadata={
+            "x_oap_ui_config": {
+                "type": "text",
+                "default": "text-embedding-nomic-embed-text-v2-moe",
+                "description": "Embedding model for retrieval (hosted on LMStudio)"
+            }
+        }
+    )
+    # Model Configuration
+    summarization_model: str = Field(
+        default="openai:gpt-oss-120b",
+        metadata={
+            "x_oap_ui_config": {
+                "type": "text",
+                "default": "openai:gpt-oss-120b",
+                "description": "Model for summarizing research results from search results"
             }
         }
     )
@@ -151,11 +194,11 @@ class Configuration(BaseModel):
         }
     )
     research_model: str = Field(
-        default="openai:gpt-4.1",
+        default="openai:gpt-oss-120b",
         metadata={
             "x_oap_ui_config": {
                 "type": "text",
-                "default": "openai:gpt-4.1",
+                "default": "openai:gpt-oss-120b",
                 "description": "Model for conducting research. NOTE: Make sure your Researcher Model supports the selected search API."
             }
         }
@@ -171,11 +214,11 @@ class Configuration(BaseModel):
         }
     )
     compression_model: str = Field(
-        default="openai:gpt-4.1",
+        default="openai:gpt-oss-120b",
         metadata={
             "x_oap_ui_config": {
                 "type": "text",
-                "default": "openai:gpt-4.1",
+                "default": "openai:gpt-oss-120b",
                 "description": "Model for compressing research findings from sub-agents. NOTE: Make sure your Compression Model supports the selected search API."
             }
         }
@@ -191,11 +234,11 @@ class Configuration(BaseModel):
         }
     )
     final_report_model: str = Field(
-        default="openai:gpt-4.1",
+        default="openai:gpt-oss-120b",
         metadata={
             "x_oap_ui_config": {
                 "type": "text",
-                "default": "openai:gpt-4.1",
+                "default": "openai:gpt-oss-120b",
                 "description": "Model for writing the final report from all research findings"
             }
         }

@@ -9,6 +9,7 @@ This module validates that:
 """
 
 import pytest
+
 from src.agents import get_all_specialists, get_career_specialist
 
 
