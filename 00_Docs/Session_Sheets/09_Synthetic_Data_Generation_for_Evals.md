@@ -16,7 +16,6 @@
 No new tools or accounts required for this session
    
 ## 📜 Recommended Reading
-- [All about synthetic data generation](https://blog.ragas.io/all-about-synthetic-data-generation) (Nov 2024)
 - [Mastering LLM Techniques: Evaluation](https://developer.nvidia.com/blog/mastering-llm-techniques-evaluation/) (Jan 2025)
 
 # 🗺️ Overview
