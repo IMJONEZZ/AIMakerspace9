@@ -16,6 +16,7 @@ from langchain_core.messages import (
     MessageLikeRepresentation,
     filter_messages,
 )
+from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import (
     BaseTool,
@@ -89,7 +90,7 @@ async def searxng_search(
         api_key=model_api_key,
         base_url=configurable.lmstudio_base_url if configurable.summarization_model.startswith("openai:") else None,
         tags=["open_source:nostream"]
-    ).with_structured_output(Summary).with_retry(
+    ).with_retry(
         stop_after_attempt=configurable.max_structured_output_retries
     )
     
@@ -203,17 +204,24 @@ async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
         Formatted summary with key excerpts, or original content if summarization fails
     """
     try:
-        # Create prompt with current date context
+        # Create parser for structured output
+        parser = PydanticOutputParser(pydantic_object=Summary)
+        
+        # Create prompt with current date context and format instructions
         prompt_content = summarize_webpage_prompt.format(
             webpage_content=webpage_content, 
-            date=get_today_str()
+            date=get_today_str(),
+            format_instructions=parser.get_format_instructions()
         )
         
         # Execute summarization with timeout to prevent hanging
-        summary = await asyncio.wait_for(
+        response = await asyncio.wait_for(
             model.ainvoke([HumanMessage(content=prompt_content)]),
             timeout=100000.0  # 100,000 second timeout for summarization (~27.7 hours)
         )
+        
+        # Parse the structured output
+        summary = parser.parse(response.content)
         
         # Format the summary with structured sections
         formatted_summary = (
@@ -956,3 +964,58 @@ def get_tavily_api_key(config: RunnableConfig):
     """
     # SearxNG does not require an API key for self-hosted instances
     return None
+
+
+async def parse_structured_output_with_retry(
+    model,
+    parser,
+    messages,
+    max_retries: int = 3
+):
+    """Parse structured output from model with retry logic for LMStudio compatibility.
+    
+    This function wraps PydanticOutputParser with retry logic to handle cases
+    where the model doesn't output valid JSON on the first attempt. This is
+    particularly useful when working with LMStudio which has strict API
+    compatibility requirements that don't work with LangChain's 
+    with_structured_output() method.
+    
+    Args:
+        model: The LangChain chat model to invoke
+        parser: PydanticOutputParser instance configured with the desired schema
+        messages: List of messages to send to the model
+        max_retries: Maximum number of retry attempts
+        
+    Returns:
+        Parsed Pydantic model instance
+        
+    Raises:
+        OutputParserException: If all retry attempts fail
+    """
+    from langchain_core.output_parsers import OutputParserException
+    
+    last_error = None
+    last_response = None
+    for attempt in range(max_retries):
+        try:
+            response = await model.ainvoke(messages)
+            last_response = response
+            return parser.parse(response.content)
+        except OutputParserException as e:
+            last_error = e
+            if attempt < max_retries - 1 and last_response is not None:
+                # Add error feedback to help the model correct itself
+                error_message = f"""
+Your previous response could not be parsed. Please ensure you respond with valid JSON that matches the required format.
+
+Error: {str(e)}
+
+Please try again, making sure to output only valid JSON without any markdown formatting or additional text.
+"""
+                messages = messages + [
+                    AIMessage(content=last_response.content),
+                    HumanMessage(content=error_message)
+                ]
+            continue
+    
+    raise last_error

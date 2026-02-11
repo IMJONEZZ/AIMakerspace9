@@ -1,6 +1,7 @@
 """Main LangGraph implementation for the Deep Research agent."""
 
 import asyncio
+import json
 from typing import Literal
 
 from langchain.chat_models import init_chat_model
@@ -12,6 +13,7 @@ from langchain_core.messages import (
     filter_messages,
     get_buffer_string,
 )
+from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
@@ -88,32 +90,37 @@ async def clarify_with_user(state: AgentState, config: RunnableConfig) -> Comman
     if configurable.research_model.startswith("openai:") and configurable.lmstudio_base_url:
         model_config["base_url"] = configurable.lmstudio_base_url
     
-    # Configure model with structured output and retry logic
+    # Use PydanticOutputParser for LMStudio compatibility
+    # LMStudio doesn't support with_structured_output's function_calling or json_mode methods
+    parser = PydanticOutputParser(pydantic_object=ClarifyWithUser)
     clarification_model = (
         configurable_model
-        .with_structured_output(ClarifyWithUser)
         .with_retry(stop_after_attempt=configurable.max_structured_output_retries)
         .with_config(model_config)
     )
-    
+
     # Step 3: Analyze whether clarification is needed
     prompt_content = clarify_with_user_instructions.format(
-        messages=get_buffer_string(messages), 
-        date=get_today_str()
+        messages=get_buffer_string(messages),
+        date=get_today_str(),
+        format_instructions=parser.get_format_instructions()
     )
-    response = await clarification_model.ainvoke([HumanMessage(content=prompt_content)])
     
+    # Parse the response using PydanticOutputParser
+    raw_response = await clarification_model.ainvoke([HumanMessage(content=prompt_content)])
+    response = parser.parse(raw_response.content)
+
     # Step 4: Route based on clarification analysis
     if response.need_clarification:
         # End with clarifying question for user
         return Command(
-            goto=END, 
+            goto=END,
             update={"messages": [AIMessage(content=response.question)]}
         )
     else:
         # Proceed to research with verification message
         return Command(
-            goto="write_research_brief", 
+            goto="write_research_brief",
             update={"messages": [AIMessage(content=response.verification)]}
         )
 
@@ -144,21 +151,26 @@ async def write_research_brief(state: AgentState, config: RunnableConfig) -> Com
     if configurable.research_model.startswith("openai:") and configurable.lmstudio_base_url:
         research_model_config["base_url"] = configurable.lmstudio_base_url
     
-    # Configure model for structured research question generation
+    # Use PydanticOutputParser for LMStudio compatibility
+    # LMStudio doesn't support with_structured_output's function_calling or json_mode methods
+    parser = PydanticOutputParser(pydantic_object=ResearchQuestion)
     research_model = (
         configurable_model
-        .with_structured_output(ResearchQuestion)
         .with_retry(stop_after_attempt=configurable.max_structured_output_retries)
         .with_config(research_model_config)
     )
-    
+
     # Step 2: Generate structured research brief from user messages
     prompt_content = transform_messages_into_research_topic_prompt.format(
         messages=get_buffer_string(state.get("messages", [])),
-        date=get_today_str()
+        date=get_today_str(),
+        format_instructions=parser.get_format_instructions()
     )
-    response = await research_model.ainvoke([HumanMessage(content=prompt_content)])
     
+    # Parse the response using PydanticOutputParser
+    raw_response = await research_model.ainvoke([HumanMessage(content=prompt_content)])
+    response = parser.parse(raw_response.content)
+
     # Step 3: Initialize supervisor with research brief and instructions
     supervisor_system_prompt = lead_researcher_prompt.format(
         date=get_today_str(),

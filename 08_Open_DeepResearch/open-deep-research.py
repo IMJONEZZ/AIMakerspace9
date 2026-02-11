@@ -202,10 +202,10 @@ def _(mo):
     ### Model Configuration (LMStudio OpenAI-compatible)
     - **lmstudio_base_url** - LMStudio API endpoint (default: http://192.168.1.79:8080/v1)
     - **lmstudio_api_key** - API key for LMStudio (typically empty for local instances)
-    - **research_model** - Model for research and supervision (openai:openai/gpt-oss-120b)
-    - **compression_model** - Model for synthesizing findings (openai:openai/gpt-oss-120b)
-    - **final_report_model** - Model for writing the final report (openai:openai/gpt-oss-120b)
-    - **summarization_model** - Model for summarizing web search results (openai:openai/gpt-oss-120b)
+    - **research_model** - Model for research and supervision (openai:glm-4.7)
+    - **compression_model** - Model for synthesizing findings (openai:glm-4.7)
+    - **final_report_model** - Model for writing the final report (openai:glm-4.7)
+    - **summarization_model** - Model for summarizing web search results (openai:glm-4.7)
     - **embedding_model** - Model for embeddings (text-embedding-nomic-embed-text-v2-moe)
 
     ### Search Configuration (SearxNG Self-Hosted)
@@ -337,49 +337,37 @@ def _(mo):
 
     ### What This Prompt Accomplishes
 
-    The `research_system_prompt` is designed to guide an AI agent in conducting **focused web research** on user-defined topics. It serves as a system prompt for individual researchers who are delegated specific research tasks by a lead researcher agent.
-
-    **Key Objectives:**
-    - Guide the AI to systematically gather information using search tools
-    - Ensure efficient, targeted research rather than endless searching
-    - Enforce reflection between searches to assess progress and direction
-    - Balance comprehensiveness with resource constraints (tool call budgets)
+    The research_system_prompt is designed to guide an AI agent in conducting web research on user-defined topics. It serves as a system prompt for individual researchers who are delegated specific research tasks by a lead researcher agent.
 
     ### Key Techniques Used
 
     **1. Structured Sections with XML-Like Tags**
-    The prompt uses clear, labeled sections (`<Task>`, `<Available Tools>`, `<Instructions>`, `<Hard Limits>`, `<Show Your Thinking>`). This creates visual hierarchy and makes the prompt easy for both developers and AI models to parse.
+    The prompt uses clear, labeled sections (`<Task>`, `<Available Tools>`, `<Instructions>`, `<Hard Limits>`, `<Show Your Thinking>`). This creates visual hierarchy and makes the prompt easy for both developers and AI models to parse. I'm a big fan of tags, so this is sick.
 
-    **2. Role Definition with Analogical Reasoning**
-    The prompt establishes a clear role ("research assistant") and uses the analogy "Think like a **human researcher with limited time**." This grounds the AI's behavior in familiar human-like constraints and decision-making patterns.
-
-    **3. Explicit Step-by-Step Instructions**
+    **2. Explicit Step-by-Step Instructions**
     The `<Instructions>` section provides a numbered algorithm (1-5) that guides the research process:
     ```
     1. Read question carefully → 2. Start broad → 3. Assess → 4. Narrow down → 5. Stop
     ```
     This creates a reproducible workflow for the AI to follow.
 
-    **4. Hard Constraints with Quantified Limits**
+    **3. Hard Constraints with Quantified Limits**
     The `<Hard Limits>` section sets explicit, measurable boundaries:
     - Simple queries: 2-3 search calls max
     - Complex queries: 5 search calls max
     - Stop conditions (comprehensive answer, 3+ sources, duplicate results)
 
-    This prevents the agent from wasting resources on endless searching.
-
-    **5. Reflection Loop via `think_tool`**
-    The prompt mandates reflective thinking after each search using the `think_tool`. This creates an iterative cycle: **search → reflect → assess → decide next action**, mimicking human research methodology.
+    This prevents the agent from endlessly searching.
 
     ### Suggested Improvement
 
     **Add Concrete Examples**
 
-    The current prompt explains what to do but doesn't show how it looks in practice. Adding 1-2 mini-examples would make the instructions more concrete and reduce ambiguity.
+    The current prompt explains what to do but doesn't show how it looks in practice. Adding 1-2 few-shot examples would make the instructions more concrete and reduce ambiguity.
 
     **Suggested addition:**
 
-    ```xml
+    ```
     <Example Workflow>
     User question: "What are the environmental impacts of electric vehicles?"
 
@@ -394,22 +382,6 @@ def _(mo):
     Result: 2 searches, comprehensive answer found.
     </Example Workflow>
     ```
-
-    **Why this helps:**
-    - Demonstrates the "broad → narrow" approach
-    - Shows what reflection looks like in practice
-    - Makes stop criteria more tangible
-    - Reduces the AI's need to infer proper behavior
-
-    ### Summary Table
-
-    | Element | Purpose |
-    |---------|---------|
-    | **Role Definition** | Sets behavioral expectations ("human researcher with limited time") |
-    | **Structured Sections** | Creates clear, parseable instructions for the AI |
-    | **Step-by-Step Instructions** | Provides an algorithmic workflow to follow |
-    | **Hard Limits** | Prevents resource waste with quantified boundaries |
-    | **Reflection Loop** | Ensures quality through think_tool after each search |
     """)
     return
 
@@ -859,7 +831,7 @@ def _(mo):
     ### Configuration for Open Source Stack
 
     We'll configure the system to use:
-    - **LMStudio** with openai/gpt-oss-120b for all research, supervision, and report generation
+    - **LMStudio** with glm-4.7 for all research, supervision, and report generation
     - **SearxNG** for web search (self-hosted at http://192.168.1.36:4000)
     - **Moderate parallelism** (1 concurrent researcher for resource control)
     - **Clarification enabled** (will ask if research scope is unclear)
@@ -876,14 +848,14 @@ def _(uuid):
             "lmstudio_base_url": "http://192.168.1.79:8080/v1",
             "lmstudio_api_key": "",  # Empty for local instances
             "embedding_model": "text-embedding-nomic-embed-text-v2-moe",
-            # Model configuration - using openai/gpt-oss-120b via LMStudio for everything
-            "research_model": "openai:openai/gpt-oss-120b",
+            # Model configuration - using glm-4.7 via LMStudio for everything
+            "research_model": "openai:glm-4.7",
             "research_model_max_tokens": 20000,
-            "compression_model": "openai:openai/gpt-oss-120b",
+            "compression_model": "openai:glm-4.7",
             "compression_model_max_tokens": 20000,
-            "final_report_model": "openai:openai/gpt-oss-120b",
+            "final_report_model": "openai:glm-4.7",
             "final_report_model_max_tokens": 20000,
-            "summarization_model": "openai:openai/gpt-oss-120b",
+            "summarization_model": "openai:glm-4.7",
             "summarization_model_max_tokens": 20000,
             # Research behavior
             "allow_clarification": True,
@@ -900,7 +872,7 @@ def _(uuid):
     }
 
     print("✓ Configuration ready")
-    print(f"  - Research Model: openai/gpt-oss-120b (via LMStudio)")
+    print(f"  - Research Model: glm-4.7 (via LMStudio)")
     print(f"  - Max Concurrent Researchers: 1")
     print(f"  - Max Iterations: 2")
     print(f"  - Search API: SearxNG (self-hosted)")
@@ -1082,6 +1054,7 @@ def _(mo):
 def _(mo):
     mo.md(r"""
     ##### Answer:
+    Parallel researchers are faster but cost more, while sequential research is cheaper but slower. Choose parallel when speed matters and tasks are independent; choose sequential for tight budgets or dependent tasks.
     """)
     return
 
@@ -1100,6 +1073,7 @@ def _(mo):
 def _(mo):
     mo.md(r"""
     ##### Answer:
+    For production, you'd need user authentication and profiles (to track individual wellness goals), a database to persist research history and recommendations, an API layer for frontend integration with rate limiting and caching, monitoring/observability for tracking costs and performance, plus content moderation to filter wellness advice.
     """)
     return
 
@@ -1150,14 +1124,14 @@ async def _(Markdown, display, graph, uuid):
             "lmstudio_base_url": "http://192.168.1.79:8080/v1",
             "lmstudio_api_key": "",
             "embedding_model": "text-embedding-nomic-embed-text-v2-moe",
-            # Model configuration using openai/gpt-oss-120b
-            "research_model": "openai:openai/gpt-oss-120b",
+            # Model configuration using glm-4.7
+            "research_model": "openai:glm-4.7",
             "research_model_max_tokens": 20000,
-            "compression_model": "openai:openai/gpt-oss-120b",
+            "compression_model": "openai:glm-4.7",
             "compression_model_max_tokens": 20000,
-            "final_report_model": "openai:openai/gpt-oss-120b",
+            "final_report_model": "openai:glm-4.7",
             "final_report_model_max_tokens": 20000,
-            "summarization_model": "openai:openai/gpt-oss-120b",
+            "summarization_model": "openai:glm-4.7",
             "summarization_model_max_tokens": 20000,
             # Research behavior - increased iterations for comprehensive coverage
             "allow_clarification": True,
@@ -1229,7 +1203,7 @@ async def _(Markdown, display, graph, uuid):
         print("=" * 60)
 
     await run_custom_research(my_wellness_request, my_config)
-    return my_wellness_request, my_config
+    return
 
 
 if __name__ == "__main__":

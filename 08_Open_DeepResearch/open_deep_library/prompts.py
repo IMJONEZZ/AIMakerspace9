@@ -18,6 +18,8 @@ If you need to ask a question, follow these guidelines:
 - Use bullet points or numbered lists if appropriate for clarity. Make sure that this uses markdown formatting and will be rendered correctly if the string output is passed to a markdown renderer.
 - Don't ask for unnecessary information, or information that the user has already provided. If you can see that the user has already provided the information, do not ask for it again.
 
+{format_instructions}
+
 Respond in valid JSON format with these exact keys:
 "need_clarification": boolean,
 "question": "<question to ask the user to clarify the report scope>",
@@ -41,7 +43,7 @@ For the verification message when no clarification is needed:
 """
 
 
-transform_messages_into_research_topic_prompt = """You will be given a set of messages that have been exchanged so far between yourself and the user. 
+transform_messages_into_research_topic_prompt = """You will be given a set of messages that have been exchanged so far between yourself and the user.
 Your job is to translate these messages into a more detailed and concrete research question that will be used to guide the research.
 
 The messages that have been exchanged so far between yourself and the user are:
@@ -52,6 +54,8 @@ The messages that have been exchanged so far between yourself and the user are:
 Today's date is {date}.
 
 You will return a single research question that will be used to guide the research.
+
+{format_instructions}
 
 Guidelines:
 1. Maximize Specificity and Detail
@@ -336,6 +340,8 @@ When handling different types of content:
 Your summary should be significantly shorter than the original content but comprehensive enough to stand alone as a source of information. Aim for about 25-30 percent of the original length, unless the content is already concise.
 
 Present your summary in the following format:
+
+{format_instructions}
 
 ```
 {{
