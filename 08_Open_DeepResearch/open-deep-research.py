@@ -202,10 +202,10 @@ def _(mo):
     ### Model Configuration (LMStudio OpenAI-compatible)
     - **lmstudio_base_url** - LMStudio API endpoint (default: http://192.168.1.79:8080/v1)
     - **lmstudio_api_key** - API key for LMStudio (typically empty for local instances)
-    - **research_model** - Model for research and supervision (openai:glm-4.7)
-    - **compression_model** - Model for synthesizing findings (openai:glm-4.7)
-    - **final_report_model** - Model for writing the final report (openai:glm-4.7)
-    - **summarization_model** - Model for summarizing web search results (openai:glm-4.7)
+    - **research_model** - Model for research and supervision (openai:minimax-m2.1)
+    - **compression_model** - Model for synthesizing findings (openai:minimax-m2.1)
+    - **final_report_model** - Model for writing the final report (openai:minimax-m2.1)
+    - **summarization_model** - Model for summarizing web search results (openai:minimax-m2.1)
     - **embedding_model** - Model for embeddings (text-embedding-nomic-embed-text-v2-moe)
 
     ### Search Configuration (SearxNG Self-Hosted)
@@ -831,7 +831,7 @@ def _(mo):
     ### Configuration for Open Source Stack
 
     We'll configure the system to use:
-    - **LMStudio** with glm-4.7 for all research, supervision, and report generation
+    - **LMStudio** with minimax-m2.1 for all research, supervision, and report generation
     - **SearxNG** for web search (self-hosted at http://192.168.1.36:4000)
     - **Moderate parallelism** (1 concurrent researcher for resource control)
     - **Clarification enabled** (will ask if research scope is unclear)
@@ -848,14 +848,14 @@ def _(uuid):
             "lmstudio_base_url": "http://192.168.1.79:8080/v1",
             "lmstudio_api_key": "",  # Empty for local instances
             "embedding_model": "text-embedding-nomic-embed-text-v2-moe",
-            # Model configuration - using glm-4.7 via LMStudio for everything
-            "research_model": "openai:glm-4.7",
+            # Model configuration - using minimax-m2.1 via LMStudio for everything
+            "research_model": "openai:minimax-m2.1",
             "research_model_max_tokens": 20000,
-            "compression_model": "openai:glm-4.7",
+            "compression_model": "openai:minimax-m2.1",
             "compression_model_max_tokens": 20000,
-            "final_report_model": "openai:glm-4.7",
+            "final_report_model": "openai:minimax-m2.1",
             "final_report_model_max_tokens": 20000,
-            "summarization_model": "openai:glm-4.7",
+            "summarization_model": "openai:minimax-m2.1",
             "summarization_model_max_tokens": 20000,
             # Research behavior
             "allow_clarification": True,
@@ -872,7 +872,7 @@ def _(uuid):
     }
 
     print("✓ Configuration ready")
-    print(f"  - Research Model: glm-4.7 (via LMStudio)")
+    print(f"  - Research Model: minimax-m2.1 (via LMStudio)")
     print(f"  - Max Concurrent Researchers: 1")
     print(f"  - Max Iterations: 2")
     print(f"  - Search API: SearxNG (self-hosted)")
@@ -908,6 +908,7 @@ async def _(Markdown, config, display, graph):
 
     Please research the best evidence-based strategies for improving sleep quality and create a comprehensive sleep improvement plan for me.
     """
+
 
     # Execute the graph
     async def run_research():
@@ -947,7 +948,9 @@ async def _(Markdown, config, display, graph):
                 elif node_name == "supervisor_tools":
                     print(f"\nExecuting supervisor's tool calls...")
                     if "notes" in node_output:
-                        print(f"Research notes collected: {len(node_output['notes'])}")
+                        print(
+                            f"Research notes collected: {len(node_output['notes'])}"
+                        )
 
                 elif node_name == "final_report_generation":
                     if "final_report" in node_output:
@@ -959,6 +962,7 @@ async def _(Markdown, config, display, graph):
         print("\n" + "=" * 60)
         print("Research workflow completed!")
         print("=" * 60)
+
 
     # Run the research
     await run_research()
@@ -1124,14 +1128,14 @@ async def _(Markdown, display, graph, uuid):
             "lmstudio_base_url": "http://192.168.1.79:8080/v1",
             "lmstudio_api_key": "",
             "embedding_model": "text-embedding-nomic-embed-text-v2-moe",
-            # Model configuration using glm-4.7
-            "research_model": "openai:glm-4.7",
+            # Model configuration using minimax-m2.1
+            "research_model": "openai:minimax-m2.1",
             "research_model_max_tokens": 20000,
-            "compression_model": "openai:glm-4.7",
+            "compression_model": "openai:minimax-m2.1",
             "compression_model_max_tokens": 20000,
-            "final_report_model": "openai:glm-4.7",
+            "final_report_model": "openai:minimax-m2.1",
             "final_report_model_max_tokens": 20000,
-            "summarization_model": "openai:glm-4.7",
+            "summarization_model": "openai:minimax-m2.1",
             "summarization_model_max_tokens": 20000,
             # Research behavior - increased iterations for comprehensive coverage
             "allow_clarification": True,
@@ -1145,6 +1149,7 @@ async def _(Markdown, display, graph, uuid):
             "thread_id": str(uuid.uuid4()),
         }
     }
+
 
     async def run_custom_research(request, config):
         """Run custom wellness research workflow."""
@@ -1180,9 +1185,9 @@ async def _(Markdown, display, graph, uuid):
                         if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
                             for tc in last_msg.tool_calls:
                                 if tc["name"] == "ConductResearch":
-                                    topic = tc["args"].get("research_topic", "unknown")[
-                                        :60
-                                    ]
+                                    topic = tc["args"].get(
+                                        "research_topic", "unknown"
+                                    )[:60]
                                     print(f"  → Researcher assigned: {topic}...")
 
                 elif node_name == "supervisor_tools":
@@ -1194,13 +1199,16 @@ async def _(Markdown, display, graph, uuid):
                 elif node_name == "final_report_generation":
                     if "final_report" in node_output:
                         print(f"\n{'=' * 60}")
-                        print("FINAL REPORT: Stress Management for Tech Professionals")
+                        print(
+                            "FINAL REPORT: Stress Management for Tech Professionals"
+                        )
                         print("=" * 60 + "\n")
                         display(Markdown(node_output["final_report"]))
 
         print("\n" + "=" * 60)
         print("Research completed successfully!")
         print("=" * 60)
+
 
     await run_custom_research(my_wellness_request, my_config)
     return
