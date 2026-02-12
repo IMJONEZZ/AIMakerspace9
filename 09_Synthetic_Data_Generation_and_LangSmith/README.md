@@ -8,7 +8,7 @@
 
 | 📰 Session Sheet | ⏺️ Recording     | 🖼️ Slides        | 👨‍💻 Repo         | 📝 Homework      | 📁 Feedback       |
 |:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|
-| [Session 9: Synthetic Data Generation for Evaluation](https://www.notion.so/Session-7-Synthetic-Data-Generation-for-Evaluation-26acd547af3d80bd9db1e9ad8f41880e) |[Recording!](https://us02web.zoom.us/rec/share/5UU96rLGvm2q24vJQ19YnVJqDHkh_D7GB7P7dL_qDXPNs0-IRva4kl235y_ThbMJ.ErOuS4jux1UdX-OV) (pu@$1QU7) | [Session 9 Slides](https://www.canva.com/design/DAG0feUex_k/JTZF3nbvZe6aBGTeuzfa8w/edit?utm_content=DAG0feUex_k&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | You are here! | [Session 9 Assignment: SDG](https://forms.gle/4MBF8HiZSgjXvCZq9) | [AIE9 Feedback 9/30](https://forms.gle/ut8SuMcYVZMSnAks7)
+| [SDG](../00_Docs/Session_Sheets/09_Synthetic_Data_Generation_for_Evals.md) |[Recording!](https://us02web.zoom.us/rec/share/XDZDe3gqHjRg3DlMe2Zf_DZtMPA-m1mfq4UaXZMQIVyPbWVYrC0XWKCf77-y1d7G.kWhmFDlmvgo3Bouw) <br> passcode: `WBa$6T#y`| [Session 9 Slides](https://www.canva.com/design/DAG-EKs7Ur8/Y6WRgFfp1Ns2vLBeHXNNQw/edit?utm_content=DAG-EKs7Ur8&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | You are here! | [Session 9 Assignment: SDG](https://forms.gle/JTKq5qgTxqY77URD7) | [Feedback 2/10](https://forms.gle/grcVKmPDGd6BmoFp7) |
 
 In today's assignment, we'll be creating Synthetic Data, and using it to benchmark (and improve) a LCEL RAG Chain.
 
