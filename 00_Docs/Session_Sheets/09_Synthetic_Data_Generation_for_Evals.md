@@ -16,6 +16,7 @@
 No new tools or accounts required for this session
    
 ## 📜 Recommended Reading
+- [All about synthetic data generation](https://vibrantlabs.com/blog/all-about-synthetic-data-generation) (Nov 2024)
 - [Mastering LLM Techniques: Evaluation](https://developer.nvidia.com/blog/mastering-llm-techniques-evaluation/) (Jan 2025)
 
 # 🗺️ Overview
