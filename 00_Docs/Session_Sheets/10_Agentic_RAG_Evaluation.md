@@ -23,6 +23,7 @@
    
 ## 📜 Recommended Reading
 
+- [LLM-as-a-Judge](https://en.wikipedia.org/wiki/LLM-as-a-Judge)
 - [Self-Refine](https://arxiv.org/abs/2303.17651) (Mar 2023)
 - [RAGAS](https://arxiv.org/abs/2309.15217) (Sep 2023)
 - [Lessons from Improving AI Applications](https://blog.ragas.io/hard-earned-lessons-from-2-years-of-improving-ai-applications) (May 2025)
