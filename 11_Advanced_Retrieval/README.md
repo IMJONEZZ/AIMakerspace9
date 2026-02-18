@@ -6,7 +6,7 @@
 ## <h1 align="center" id="heading">Session 11: Advanced Retrieval with LangChain</h1>
 | 📰 Session Sheet | ⏺️ Recording     | 🖼️ Slides        | 👨‍💻 Repo         | 📝 Homework      | 📁 Feedback       |
 |:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|
-| [Session 11: Advanced Retrieval Methods for RAG](https://www.notion.so/Session-11-Advanced-Retrieval-Methods-for-RAG-26acd547af3d80e09009c93c05f83932) |[Recording!](https://us02web.zoom.us/rec/share/FBAHsqyAqZJH2eCSM2ymIlfuC6Vbvn8PRj18os7JXRNGaQwNSODbr8p-l-lHdQ.UkfCFu5yBe4Uu1yN) (7Mvk=Zk^) | [Session 11 Slides](https://www.canva.com/design/DAG1JOanotQ/MdHirX2I1BLgpWTUKMg_yg/edit?utm_content=DAG1JOanotQ&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | You are here! | [Session 11 Assignment: Advanced Retrieval](https://forms.gle/3SaoRieiK6yHqY1k6) | [AIE9 Feedback](https://forms.gle/ty3AoLmWqBqg99rn8)
+| [Advanced Retrievers](https://github.com/AI-Maker-Space/AIE9/blob/main/00_Docs/Session_Sheets/11_Advanced_Retrievers.md) |[Recording!](https://us02web.zoom.us/rec/share/xx5RHfpbWH5qk9MRnT7ez0P6z0g4rOXGX1yv2DtPNra9r5W-5f48_hkSikNmd2-X.BJMGKIvavFPg7M9i) <br> passcode: `?aLJ0gG^`| [Session 11 Slides](https://www.canva.com/design/DAG-EL_vKlU/CRLxgnhmeWO4nU5hqAiA_g/edit?utm_content=DAG-EL_vKlU&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | You are here!| [Session 11 Assignment: Adv. Retrievers](https://forms.gle/vWLCMYWL8vEgGB54A) | [Feedback 2/17](https://forms.gle/L6itmWo7n2nkLQUu7) |
 
 ### Prerequisites
 
