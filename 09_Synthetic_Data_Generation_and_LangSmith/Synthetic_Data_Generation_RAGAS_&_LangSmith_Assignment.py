@@ -321,7 +321,7 @@ def _(mo):
     mo.md(r"""
     ### Knowledge Graph Relationship Debug
 
-    Let's check what relationship types exist in our knowledge graph.
+    This part is new, I had to add it to help figure out what the hell was going on with the kg generation and why relationships weren't being created correctly.
     """)
     return
 
@@ -671,7 +671,7 @@ def _(rag_documents):
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    We'll create our vectorstore using OpenAI's [`text-embedding-3-small`](https://platform.openai.com/docs/guides/embeddings/embedding-models) embedding model.
+    We'll create our vectorstore using nomic-embed-text-v2-moe embedding model.
     """)
     return
 

@@ -12,12 +12,11 @@ dependencies = [
     "langchain-qdrant>=0.2.1",
     "langgraph==0.6.7",
     "ragas==0.2.10",
-    "langchain-cohere==0.4.4",
-    "cohere>=5.12.0,<5.13.0", 
     "qdrant-client>=1.7.0",
     "pymupdf>=1.24.0",
     "jupyter>=1.1.1",
     "rapidfuzz>=3.0.0",
     "pyppeteer>=2.0.0",
     "ipykernel>=6.30.1",
+    "sentence-transformers>=2.2.0",
 ]
