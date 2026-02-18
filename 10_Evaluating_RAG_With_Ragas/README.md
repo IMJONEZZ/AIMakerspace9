@@ -9,8 +9,7 @@
 
 | Session Sheet | Recording     | Slides        | Repo         | Homework      | Feedback       |
 |:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|:-----------------|
-| [Evaluating RAG with Ragas](https://github.com/AI-Maker-Space/AIE9/blob/main/00_Docs/Session_Sheets/09_Evaluating_RAG_With_Ragas.md) | Coming soon! | Coming soon! | You are here! | Coming soon! | Coming soon! |
-
+| [Agentic RAG Evaluation](https://github.com/AI-Maker-Space/AIE9/blob/main/00_Docs/Session_Sheets/10_Agentic_RAG_Evaluation.md) |[Recording!](https://us02web.zoom.us/rec/share/m75V8ObrHg1O-RKKaMlSHoizy8eWMwLBf0nE0W8V7ui41RD2Q-IBFO3-QD304fZ3.qktR96_n9PRz5BCU) <br> passcode: `3jsJKD=o`| [Session 10 Slides](https://www.canva.com/design/DAG-ECzru48/iaesY_gFRif-Fu3s3vlDVQ/edit?utm_content=DAG-ECzru48&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton) | You are here! | [Session 10 Assignment: RAGAS](https://forms.gle/oMC198vEgmV4khej8) | [Feedback 2/12](https://forms.gle/pHwLY2mcALEbWCcr8) |
 
 ### Outline:
 
