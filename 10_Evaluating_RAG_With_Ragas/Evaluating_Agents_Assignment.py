@@ -713,7 +713,18 @@ async def _(
         api_key="dummy-key",
     )
     score_1 = await tool_accuracy_scorer_1.multi_turn_ascore(sample_1)
-    print(f"Tool Call Accuracy Score: {score_1}")
+    return ragas_trace_4, score_1
+
+
+@app.cell
+def _(ragas_trace_4):
+    ragas_trace_4
+    return
+
+
+@app.cell
+def _(score_1):
+    score_1
     return
 
 

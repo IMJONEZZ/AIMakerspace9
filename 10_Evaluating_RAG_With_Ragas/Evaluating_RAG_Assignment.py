@@ -951,7 +951,7 @@ def _(Document, List, START, StateGraph, TypedDict, generate, retrieve_custom):
 @app.cell
 def _(custom_graph):
     test_response = custom_graph.invoke(
-        {"question": "How can I improve my sleep quality?"}
+        {"question": "What are the best exercises to do for lower back pain?"}
     )
     test_response["response"]
     return
@@ -1031,7 +1031,7 @@ def _(mo):
     - Reranked (original): Uses k=20 initial retrieval, then reranks to top 5
     - Custom: Query expansion + deduplication + reranking to top 8
 
-    Despite all of this engineering I put into making the query expansion relevant, and deduplicating the retrieved documents so to get more unique rerankings, the output of this custom project was almost exactly the same as the Adjusted graph without reranking.
+    Despite all of this engineering I put into making the query expansion relevant, and deduplicating the retrieved documents to get more unique rerankings, the output of this custom project was almost exactly the same as the Adjusted graph without reranking.
     """)
     return
 
@@ -1089,7 +1089,7 @@ def _(mo):
     **Retrieval Component** → Context Precision, Context Recall, Noise Sensitivity
     - These metrics evaluate the quality of documents retrieved from the vector store
 
-    **Context/Augmentation** → LLMContextRecall, ContextEntityRecall  
+    **Context/Augmentation** → LLMContextRecall, ContextEntityRecall
     - These metrics measure how well the retrieved context captures the needed information
 
     **Generation Component** → Faithfulness, FactualCorrectness, ResponseRelevancy
